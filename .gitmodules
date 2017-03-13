@@ -1,0 +1,3 @@
+[submodule "spci"]
+	path = spci
+	url = https://david.svec01%40upol.cz@bitbucket.imtm.cz/scm/spci/spci.git
