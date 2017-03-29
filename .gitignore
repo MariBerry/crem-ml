@@ -1,0 +1,7 @@
+.idea
+models/
+sdf/
+todo.txt
+__pycache__/
+setup.txt
+std_rules.xml

@@ -18,7 +18,7 @@ import pareto_simple_cull as pareto_alg
 #               predictions: list of parameters name, e.g. ['logBB', 'solubility', ...]
 def save_output(input_sdf, output_file, input_dict, predictions):
     # store all compounds from sdf file
-    compounds = Chem.SDMolSupplier(input_sdf)
+    compounds = Chem.SDMolSupplier(input_sdf, removeHs=False)
 
     # prepare list of files
     list_of_files = []

@@ -4,14 +4,16 @@ import sys
 import shutil
 
 from subprocess import call
-
-import calc_atomic_properties_chemaxon
-import filter_descriptors
-import predict
+from spci import calc_atomic_properties_chemaxon
+from spci import filter_descriptors
+from spci import predict
+from spci import find_frags_auto_rdkit as find_frags
+from spci import calc_frag_contrib as calc_contrib
 import process_predictions
 
-sys.path.insert(1, os.path.join(sys.path[0], 'sirms'))
+sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
 import sirms
+
 
 
 def quote_str(s):
@@ -67,7 +69,8 @@ def calculate_atomic_prop(input_std_sdf, chemaxon_path, properties):
 #               copy_setup: boolean value, if true, it copies file with setup to calculation of sirms descriptor
 #                           to directory with input sdf file
 
-def calculate_sirms_descriptors(working_file, setup_path, properties, output_format, copy_setup=True):
+def calculate_sirms_descriptors(working_file, setup_path, properties, output_format, ncores, fragments_fname=None,
+                                copy_setup=True):
     print("Descriptors calculation started. Please wait it can take some time")
 
     # copy setup.txt to folder with sdf file
@@ -76,7 +79,10 @@ def calculate_sirms_descriptors(working_file, setup_path, properties, output_for
             setup_path, os.path.join(os.path.dirname(working_file), setup_path.split("/")[-1]))
 
     # calc sirms descriptors
-    x_fname = os.path.join(os.path.dirname(working_file), 'x.txt')
+    if fragments_fname is not None:
+        x_fname = os.path.join(os.path.dirname(working_file), 'new_x.txt')
+    else:
+        x_fname = os.path.join(os.path.dirname(working_file), 'x.txt')
     sirms.main_params(in_fname=working_file,    # input
                       out_fname=x_fname,        # output
                       opt_diff=properties,
@@ -92,13 +98,14 @@ def calculate_sirms_descriptors(working_file, setup_path, properties, output_for
                       opt_mix_ordered=False,
                       opt_verbose=False,
                       opt_noH=True,
-                      frag_fname=None,
+                      frag_fname=fragments_fname,
                       per_atom_fragments=False,
                       self_association_mix=False,
                       reaction_diff=False,
                       quasimix=False,
                       id_field_name=None,
-                      output_format=output_format)
+                      output_format=output_format,
+                      ncores=ncores)
 
     # filter sirms descriptors
     filter_descriptors.main_params(in_fname=x_fname,
@@ -152,53 +159,124 @@ def process_prediction(input_sdf, input_pred, parameters, output_file, methods, 
     print("Processing prediction is finished")
 
 
+def find_frags_rdkit(input_sdf_file, fragment_ids_file, smarts_string, max_cuts, verbose, error_fname):
+    print("Finding fragments has started")
+    find_frags.main_params(in_sdf=input_sdf_file,
+                                out_txt=fragment_ids_file,
+                                query=smarts_string,
+                                max_cuts=max_cuts,
+                                verbose=verbose,
+                                error_fname=error_fname)
+
+    print("Finding fragments is finished")
+
+
+def calc_frag_contrib(x_fname, parameters, models, models_dir, properties, models_type, in_format):
+
+    for parameter, model, model_dir, model_type in zip(parameters, models, models_dir, models_type):
+        print("Fragment contribution for {} started".format(parameter))
+        calc_contrib.main_params(x_fname=x_fname,
+                                      out_fname='contrib_' + parameter + '.txt',
+                                      model_names=model,
+                                      model_dir=model_dir,
+                                      prop_names=properties,
+                                      model_type=model_type,
+                                      verbose=False,
+                                      save_pred=True,
+                                      input_format=in_format,
+                                      long_format=True,
+                                      save_frag_ids=True)
+        print("Fragment contribution for {} finished".format(parameter))
+        """
+        f = open('predictions.txt', 'a')
+        f.write(open('predictions_' + parameter + '.txt', 'r').read())
+        f.close()
+        os.remove('predictions_' + parameter + '.txt')
+        """
+
+# number of generation
+num_of_gen = 1
+
 pathname = os.path.dirname(sys.argv[0])
-# paths
 script_dir = os.path.abspath(pathname)
 working_dir = os.getcwd()
-chemaxon_path = "/home/david/ChemAxon/JChem/bin"                                                    # have to be specified
-input_sdf_file = working_dir + "/dataset_FW.sdf"                                                    # have to be specified
-setup_file = script_dir + "/setup.txt"                                                              # derived
-std_rules_file = script_dir + "/std_rules.xml"                                                      # derived
-std_sdf_file = working_dir + "/" + input_sdf_file.split("/")[-1].split(".")[0] + '_std.sdf'         # derived
-std_lbl_sdf_file = working_dir + "/" + input_sdf_file.split("/")[-1].split(".")[0] + '_std_lbl.sdf' # derived
-x_fname = working_dir + "/x.txt"                                                                    # derived
-predictions = working_dir + "/predictions.txt"
+chemaxon_path = "/home/david/ChemAxon/JChem/bin"
+input_sdf_file = working_dir + "/dataset_FW.sdf"
+home_dir = working_dir
+setup_file = script_dir + "/setup.txt"
+std_rules_file = script_dir + "/std_rules.xml"
 
-properties = ['charge', 'logp', 'refractivity']
-output_format = 'svm'
+for gen in range(num_of_gen):
+    generation_dir = working_dir+'/generation_'+str(gen)
+    if os.path.exists(generation_dir):
+       shutil.rmtree(generation_dir)
+    os.makedirs(generation_dir)
+    shutil.copy2(input_sdf_file, generation_dir+'/')
 
-# standardization
-standardize_sdf(input_sdf_file, std_rules_file)
+    os.rename(generation_dir + '/' + input_sdf_file.split('/')[-1], generation_dir + '/input_dataset.sdf')
+    input_sdf_file = generation_dir + '/input_dataset.sdf'
+    working_dir = generation_dir
+    os.chdir(working_dir)
 
-# calculation of atomic properties
-calculate_atomic_prop(std_sdf_file, chemaxon_path, [property_name.lower() for property_name in properties])
+    std_sdf_file = working_dir + "/" + input_sdf_file.split("/")[-1].split(".")[0] + '_std.sdf'
+    std_lbl_sdf_file = working_dir + "/" + input_sdf_file.split("/")[-1].split(".")[0] + '_std_lbl.sdf'
+    x_fname = working_dir + "/x.txt"
+    predictions = working_dir + "/predictions.txt"
+    fragment_ids_file = working_dir + '/fragment_ids.txt'
+    fragment_x_fname = working_dir + '/new_x.txt'
 
+    properties_chemaxon = ['charge', 'logp', 'acc', 'don', 'refractivity']
+    properties_sirms = ['CHARGE', 'LOGP', 'HB', 'REFRACTIVITY']
+    properties_calc_contrib = ['overall']
+    output_format = 'svm'
+    print('Generation: ', gen)
 
-# calculation of sirms descriptors
-calculate_sirms_descriptors(std_lbl_sdf_file, setup_file, [property_name.upper() for property_name in properties], output_format)
+    # standardization
+    standardize_sdf(input_sdf_file, std_rules_file)
 
-# preparing settings predictions for one property - example
-"""
-prediction_properties = ['LOGBB']
-models_dir = [script_dir + '/models/logBB/']
-models = [['gbm', 'svm']]
-models_type = ['class']
-"""
+    # calculation of atomic properties
+    calculate_atomic_prop(std_sdf_file, chemaxon_path, properties_chemaxon)
 
-# with more properties to predict
-paramaters_to_predict = ['LOGBB', 'solubility']
-models_dir = [script_dir + '/models/logBB/', script_dir + '/models/solubility/']
-models = [['gbm', 'svm'], ['rf', 'svm']]
-models_type = ['class', 'reg']
+    # calculation of sirms descriptors
+    ncores = 4
+    calculate_sirms_descriptors(std_lbl_sdf_file, setup_file, properties_sirms, output_format, ncores)
 
-# predict properties of std_lbl_sdf file
-predict_properties(paramaters_to_predict, x_fname, output_format, models, models_dir, models_type)
+    # with more properties to predict
+    paramaters_to_predict = ['LOGBB', 'solubility']
+    models_dir = [script_dir + '/models/logBB/', script_dir + '/models/solubility/']
+    models = [['gbm', 'svm'], ['rf', 'svm']]
+    models_type = ['class', 'reg']
 
-# process predictions
-methods = ['filtering', 'pareto']
-thresholds =['more0.5', 'more-4']
-# for testing bounded_box = False
-bounded_box = False
-process_prediction(std_lbl_sdf_file, predictions, paramaters_to_predict, 'output.sdf', methods, thresholds, bounded_box)
+    # predict properties of std_lbl_sdf file
+    predict_properties(paramaters_to_predict, x_fname, output_format, models, models_dir, models_type)
+
+    # process predictions
+    methods = ['filtering', 'pareto']
+    thresholds =['more0.5', 'more-4']
+    # for testing bounded_box = False
+    bounded_box = False
+    process_prediction(std_lbl_sdf_file, predictions, paramaters_to_predict, 'output.sdf', methods, thresholds, bounded_box)
+
+    # input to modification part
+    output_sdf_file = os.path.dirname(input_sdf_file) + '/output_pareto.sdf'
+
+    # calculate fragment ids
+    smarts_string = "[#6+0;!$(*=,#[!#6])]!@!=!#[*]"
+    max_cuts = 3
+    find_frags_verbose = False
+    error_fname = os.path.dirname(input_sdf_file) + '/fragments_log.log'
+    find_frags_rdkit(output_sdf_file, fragment_ids_file, smarts_string, max_cuts, find_frags_verbose, error_fname)
+
+    # calculate sirms descriptors using fragments
+    calculate_sirms_descriptors(output_sdf_file, setup_file, [property_name.upper() for property_name in properties_sirms],
+                                output_format, ncores, fragments_fname=fragment_ids_file)
+
+    # calculate fragments contributions
+    calc_frag_contrib(fragment_x_fname, paramaters_to_predict, models, models_dir, properties_calc_contrib, models_type,
+                      output_format)
+
+    # end - for creating new folder with new generation we have to prepare some path variables
+    # input_sdf_file = os.path.dirname(input_sdf_file) + '/output_from_gen.sdf'
+    os.chdir(home_dir)
+    working_dir = home_dir
 
