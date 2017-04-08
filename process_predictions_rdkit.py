@@ -3,6 +3,8 @@
 import argparse
 
 import numpy as np
+from rdkit import Chem
+
 import pareto_simple_cull as pareto_alg
 
 
@@ -15,36 +17,30 @@ import pareto_simple_cull as pareto_alg
 #                            e.g. {'filtering': [[id1, predicted_value1, predicted_value2],[...]], 'pareto':[[...]]}
 #               predictions: list of parameters name, e.g. ['logBB', 'solubility', ...]
 def save_output(input_sdf, output_file, input_dict, predictions):
-    output_string = ''
+    # store all compounds from sdf file
+    compounds = Chem.SDMolSupplier(input_sdf, removeHs=False)
+
     # prepare list of files
     list_of_files = []
     for parameter in input_dict.keys():
-        list_of_files.append(open(output_file.split('.')[0] + '_' + parameter + '.' + output_file.split('.')[1], 'w'))
-    for parameter, o_file in zip(input_dict.keys(), list_of_files):
-        in_file = open(input_sdf, 'r')
-        iter_file = iter(in_file)
-        for item in input_dict[parameter]:
-            for line in iter_file:
-                line = line.rstrip()
-                if str(item[0]) == line:
-                    output_string += line + '\n'
-                    for line in iter_file:
-                        line = line.rstrip()
-                        if '$$$$' in line:
-                            for index_of_predictions, predict in enumerate(predictions):
-                                output_string += '>  <' + predict + '>\n' + str(item[1 + index_of_predictions]) + '\n\n'
-                            output_string += line + '\n'
-                            break
-                        else:
-                            output_string += line + '\n'
+        list_of_files.append(open(output_file.split('.')[0] + '_' + parameter + '.' + output_file.split('.')[1], 'a'))
+        list_of_files[-1] = Chem.SDWriter(list_of_files[-1])
+
+    # iterate through all compounds
+    for mol in compounds:
+        # iterate through all keys in dictionary
+        for index_of_file, output_list in enumerate(input_dict.values()):
+            for item in output_list:
+                if int(Chem.Mol.GetProp(mol, 'ID')) == item[0]:
+                    for index_of_prediction, predict in enumerate(predictions):
+                        Chem.Mol.SetDoubleProp(mol, predict, item[index_of_prediction + 1])
+                    list_of_files[index_of_file].write(mol)
                     break
                 else:
-                   while not '$$$$' in next(iter_file).rstrip():
-                           pass
-        o_file.write(output_string)
-        output_string = ''
-        o_file.close()
-        in_file.close()
+                    if int(Chem.Mol.GetProp(mol, 'ID')) < item[0]:
+                        break
+
+    for f in list_of_files: f.close()
 
 
 # --------------------------Preparing variables--------------------------

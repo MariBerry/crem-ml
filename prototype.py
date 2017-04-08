@@ -268,7 +268,7 @@ for gen in range(num_of_gen):
     find_frags_rdkit(output_sdf_file, fragment_ids_file, smarts_string, max_cuts, find_frags_verbose, error_fname)
 
     # calculate sirms descriptors using fragments
-    calculate_sirms_descriptors(output_sdf_file, setup_file, [property_name.upper() for property_name in properties_sirms],
+    calculate_sirms_descriptors(output_sdf_file, setup_file, properties_sirms,
                                 output_format, ncores, fragments_fname=fragment_ids_file)
 
     # calculate fragments contributions
