@@ -22,13 +22,13 @@ def create_file_with_processed_data(in_fname, parameters):
     return f
 
 def get_predicted_value_for_whole_compound(in_file, parameters):
-    number_of_compounds = 0
+    number_of_compounds = []
     predicted_values = {}
     predicted_parameters = {}
     compounds = Chem.SDMolSupplier(in_file, removeHs=False, sanitize=False)
     for mol in compounds:
-        number_of_compounds += 1
         id = str(mol.GetProp('ID'))
+        number_of_compounds.append(int(id))
         for parameter in parameters:
             predicted_parameters[parameter] = float(mol.GetProp(parameter))
         predicted_values[id] = predicted_parameters
@@ -95,22 +95,32 @@ def normalize_contributions(in_fname, parameters, predicted_values, thresholds, 
 
 
 
-def pick_worst_ones(in_fname, number_of_fragments):
-    number_of_col = 3
-    worst_list = np.zeros((number_of_fragments + 1, number_of_col))
-    with open(in_fname, 'r') as in_f:
-        in_f.readline()
-        for i in range(number_of_fragments):
-            line = in_f.readline().split('\t')
-            worst_list[i] = np.array([line[0], line[1], float(line[-1])])
-        worst_list = worst_list[worst_list[:, number_of_col-1].argsort()]
+def pick_worst_ones(in_fname, number_of_fragments, number_of_compounds):
 
-        for line in in_f.readlines():
-            line = line.split('\t')
-            worst_list[number_of_fragments] = np.array([line[0], line[1], float(line[-1])])
-            worst_list = worst_list[worst_list[:, number_of_col-1].argsort()]
+    normalized_array = np.genfromtxt(
+        in_fname,
+        skip_header=1,
+        usecols=(0, 1, -1),
+        dtype=None,
+        names=['compound_id', 'fragment_id', 'average_contrib'],
+        delimiter='\t')
 
-    return worst_list[:number_of_fragments]
+    normalized_array.sort(order=['compound_id', 'average_contrib'])
+
+    worst_list = np.asarray(normalized_array[:number_of_fragments])
+    number_of_compounds.remove(worst_list[0][0])
+
+    for i in range(len(number_of_compounds)):
+        for index_fragment, fragment in enumerate(normalized_array[number_of_fragments:]):
+            if fragment[0] == number_of_compounds[i]:
+                from_ = number_of_fragments + index_fragment
+                to = 2 * number_of_fragments + index_fragment
+                worst_list = np.append(worst_list, normalized_array[from_:to], axis=0)
+                break
+
+    np.savetxt('worst_fragments.txt',worst_list, delimiter='\t')
+
+    return worst_list
 
 
 in_fname = 'fragment_contrib_norm.txt'
@@ -124,6 +134,8 @@ thresholds = parse_threshold(thresholds)
 number_of_fragments = normalize_contributions(in_fname, parameters, predicted_values, thresholds, get_ranges())
 
 # we can't specify more worst fragments then we have
-number_of_worst_fragments = 100
+number_of_worst_fragments = 10
 
-worst_list = pick_worst_ones(in_fname, number_of_worst_fragments)
+worst_list = pick_worst_ones(in_fname, number_of_worst_fragments, number_of_compounds)
+
+print(worst_list)
