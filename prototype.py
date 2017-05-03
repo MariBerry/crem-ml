@@ -252,7 +252,7 @@ for gen in range(num_of_gen):
 
     # process predictions
     methods = ['filtering', 'pareto']
-    thresholds =['more0.5', 'more-4']
+    thresholds =['more0.5', 'more-2']
     # for testing bounded_box = False
     bounded_box = False
     process_prediction(std_lbl_sdf_file, predictions, paramaters_to_predict, 'output.sdf', methods, thresholds, bounded_box)

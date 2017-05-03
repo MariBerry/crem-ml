@@ -22,29 +22,39 @@ def create_file_with_processed_data(in_fname, parameters):
     return f
 
 def get_predicted_value_for_whole_compound(in_file, parameters):
+    number_of_compounds = 0
     predicted_values = {}
     predicted_parameters = {}
-    compounds = Chem.SDMolSupplier(in_file, removeHs=False)
+    compounds = Chem.SDMolSupplier(in_file, removeHs=False, sanitize=False)
     for mol in compounds:
-        id = str(Chem.Mol.GetProp(mol, 'ID'))
+        number_of_compounds += 1
+        id = str(mol.GetProp('ID'))
         for parameter in parameters:
-            predicted_parameters[parameter] = float(Chem.Mol.GetProp(mol, parameter))
+            predicted_parameters[parameter] = float(mol.GetProp(parameter))
         predicted_values[id] = predicted_parameters
-    return predicted_values
+        predicted_parameters = {}
+    return predicted_values, number_of_compounds
 
 
 def compute_normalized_value(in_value, predicted_value, threshold, range):
     if threshold[0] == 'more':
-        return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
+        if threshold[1] <= predicted_value:
+            return abs(in_value)
+        else:
+            return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
     elif threshold[0] == 'less':
-        return -(2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1)
+        if threshold[1] >= predicted_value:
+            return abs(in_value)
+        else:
+            return -(2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1)
     # between
     else:
-        if predicted_value >= threshold[2]:
+        if predicted_value <= threshold[2] and predicted_value >= threshold[1]:
+            return abs(in_value)
+        elif predicted_value > threshold[2]:
             return -(2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1)
         else:
             return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
-    return 0
 
 
 def normalize_contributions(in_fname, parameters, predicted_values, thresholds, ranges):
@@ -59,9 +69,11 @@ def normalize_contributions(in_fname, parameters, predicted_values, thresholds, 
                     line = line.split('\t')
 
                     norm_value = compute_normalized_value(
-                        float(line[5]), predicted_values, thresholds[number_of_parameter], ranges[parameter])
+                                    float(line[5]),                         # fragment contributions
+                                    predicted_values[line[0]][parameter],   # predicted parameter value of compound
+                                    thresholds[number_of_parameter],        # threshold for parameter
+                                    ranges[parameter])                      # range of parameter
 
-                    # print(line_number)
                     if number_of_parameter == 0:
                         list_of_contributions.append([norm_value])
                     else:
@@ -101,13 +113,13 @@ def pick_worst_ones(in_fname, number_of_fragments):
     return worst_list[:number_of_fragments]
 
 
-in_fname = 'skuska.txt'
+in_fname = 'fragment_contrib_norm.txt'
 parameters = ['LOGBB', 'solubility']
 pred_file = 'output_pareto.sdf'
-thresholds =['more0.5', 'more-4']
+thresholds =['more0.5', 'more-2']
 
 processed_file = create_file_with_processed_data(in_fname, parameters)
-predicted_values = get_predicted_value_for_whole_compound(pred_file, parameters)
+predicted_values, number_of_compounds = get_predicted_value_for_whole_compound(pred_file, parameters)
 thresholds = parse_threshold(thresholds)
 number_of_fragments = normalize_contributions(in_fname, parameters, predicted_values, thresholds, get_ranges())
 
@@ -115,4 +127,3 @@ number_of_fragments = normalize_contributions(in_fname, parameters, predicted_va
 number_of_worst_fragments = 100
 
 worst_list = pick_worst_ones(in_fname, number_of_worst_fragments)
-print(worst_list)

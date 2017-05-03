@@ -18,7 +18,7 @@ import pareto_simple_cull as pareto_alg
 #               predictions: list of parameters name, e.g. ['logBB', 'solubility', ...]
 def save_output(input_sdf, output_file, input_dict, predictions):
     # store all compounds from sdf file
-    compounds = Chem.SDMolSupplier(input_sdf, removeHs=False)
+    compounds = Chem.SDMolSupplier(input_sdf, removeHs=False, sanitize=False)
 
     # prepare list of files
     list_of_files = []
@@ -31,13 +31,13 @@ def save_output(input_sdf, output_file, input_dict, predictions):
         # iterate through all keys in dictionary
         for index_of_file, output_list in enumerate(input_dict.values()):
             for item in output_list:
-                if int(Chem.Mol.GetProp(mol, 'ID')) == item[0]:
+                if int(mol.GetProp('ID')) == int(item[0]):
                     for index_of_prediction, predict in enumerate(predictions):
-                        Chem.Mol.SetDoubleProp(mol, predict, item[index_of_prediction + 1])
+                        mol.SetDoubleProp(predict, item[index_of_prediction + 1])
                     list_of_files[index_of_file].write(mol)
                     break
                 else:
-                    if int(Chem.Mol.GetProp(mol, 'ID')) < item[0]:
+                    if int(mol.GetProp('ID')) < int(item[0]):
                         break
 
     for f in list_of_files: f.close()
@@ -53,25 +53,26 @@ def save_output(input_sdf, output_file, input_dict, predictions):
 
 # if ad is specified, return only compounds which are in ad
 def prepare_array(input_pred, bounded_box, predictions):
-    in_data = np.genfromtxt(input_pred, delimiter='\t')
+    in_data = np.genfromtxt(input_pred, dtype=None, delimiter='\t')
 
-    in_data = in_data.astype('object')
-    in_data[:, 0] = in_data[:, 0].astype('int')
+    working_arr = np.asarray([[in_data[0][0], in_data[0][-2], in_data[0][-1]]])
+    for item in in_data[1:]:
+        working_arr = np.append(working_arr, [[item[0], item[-2], item[-1]]], axis=0)
 
     # -2 prediction column, -1 bounded box column
     if bounded_box:
-        in_data = in_data[:, [0, -2, -1]]
+        working_arr = working_arr[:, [0, -2, -1]]
     else:
-        in_data = in_data[:, [0, -2]]
+        working_arr = working_arr[:, [0, -2]]
 
     # split data after all predictions
-    in_data = np.split(in_data, len(predictions), axis=0)
+    working_arr = np.split(working_arr, len(predictions), axis=0)
 
     # add to final_array first column with ids
-    final_ar = in_data[0]
+    final_ar = working_arr[0]
 
     # add columns to final_arr with predictions and bounded box if specified
-    for ar in in_data[1:]:
+    for ar in working_arr[1:]:
         if bounded_box:
             final_ar = np.hstack((final_ar, ar[:, [1, 2]]))
         else:
@@ -130,8 +131,8 @@ def filtering(working_ar, thresholds):
 #                if predicted value match the threshold, then return 0
 def get_distance_from_threshold(col, threshold_type, threshold_value1, threshold_value2=None):
     if threshold_type == 'more':
-        if col > threshold_value1: return 0
-        else: return col - threshold_value1
+        if col >= threshold_value1: return 0
+        else: return threshold_value1 - col
     elif threshold_type == 'less':
         if col < threshold_value1: return 0
         return col - threshold_value1

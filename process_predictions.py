@@ -26,7 +26,7 @@ def save_output(input_sdf, output_file, input_dict, predictions):
         for item in input_dict[parameter]:
             for line in iter_file:
                 line = line.rstrip()
-                if str(item[0]) == line:
+                if str(int(item[0])) == line:
                     output_string += line + '\n'
                     for line in iter_file:
                         line = line.rstrip()
@@ -57,25 +57,26 @@ def save_output(input_sdf, output_file, input_dict, predictions):
 
 # if ad is specified, return only compounds which are in ad
 def prepare_array(input_pred, bounded_box, predictions):
-    in_data = np.genfromtxt(input_pred, delimiter='\t')
+    in_data = np.genfromtxt(input_pred, dtype=None, delimiter='\t')
 
-    in_data = in_data.astype('object')
-    in_data[:, 0] = in_data[:, 0].astype('int')
+    working_arr = np.asarray([[in_data[0][0], in_data[0][-2], in_data[0][-1]]])
+    for item in in_data[1:]:
+        working_arr = np.append(working_arr, [[item[0], item[-2], item[-1]]], axis=0)
 
     # -2 prediction column, -1 bounded box column
     if bounded_box:
-        in_data = in_data[:, [0, -2, -1]]
+        working_arr = working_arr[:, [0, -2, -1]]
     else:
-        in_data = in_data[:, [0, -2]]
+        working_arr = working_arr[:, [0, -2]]
 
     # split data after all predictions
-    in_data = np.split(in_data, len(predictions), axis=0)
+    working_arr = np.split(working_arr, len(predictions), axis=0)
 
     # add to final_array first column with ids
-    final_ar = in_data[0]
+    final_ar = working_arr[0]
 
     # add columns to final_arr with predictions and bounded box if specified
-    for ar in in_data[1:]:
+    for ar in working_arr[1:]:
         if bounded_box:
             final_ar = np.hstack((final_ar, ar[:, [1, 2]]))
         else:
@@ -134,8 +135,8 @@ def filtering(working_ar, thresholds):
 #                if predicted value match the threshold, then return 0
 def get_distance_from_threshold(col, threshold_type, threshold_value1, threshold_value2=None):
     if threshold_type == 'more':
-        if col > threshold_value1: return 0
-        else: return col - threshold_value1
+        if col >= threshold_value1: return 0
+        else: return threshold_value1 - col
     elif threshold_type == 'less':
         if col < threshold_value1: return 0
         return col - threshold_value1
@@ -195,7 +196,6 @@ def pareto(input_sdf, working_ar, thresholds, predictions):
 
     for index in input_to_pareto_function:
         output.append([item for item in working_ar[index][0:len(thresholds)+1]])
-
     return output
 
 

@@ -36,22 +36,3 @@ def simple_cull(inputPoints, dominates):
 def dominates_min(row, anotherRow):
     return sum([row[x] <= anotherRow[x] for x in range(len(row))]) == len(row)  # minimization domination
 
-
-# return simple distance from threshold
-# this function is used in process_predictions.py, numpy version use its own vectorized version of this function
-# it produces value which represents distance from threshold
-# input format: point: float number, predicted value
-#               threshold: list with threshold, e.g. ['more', -3.2] or ['between', -0.5, 2.8]
-# output format: return 0 if the value matches the threshold,
-#                if not it returns value which represents distance from threshold
-def get_distance_from_threshold(point, threshold):
-    if threshold[0] == 'more':
-        return 0 if point > threshold[1] else threshold[1] - point
-    elif threshold[0] == 'less':
-        return 0 if point < threshold[1] else point - threshold[1]
-    else:
-        if point >= threshold[1] and point <= threshold[2]:
-            return 0
-        else:
-            return point - threshold[2] if point > threshold[2] else threshold[1] - point
-

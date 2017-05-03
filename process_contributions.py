@@ -4,13 +4,15 @@ from process_predictions import parse_threshold
 import math
 import numpy as np
 
+
 def get_ranges():
     """
     Now it only returns hardcoded ranges of experimental values for models. Later need to be changed to read it from
     some external filed stored in coresponding model directory.
-    :return: dictionary with parameter: [range_from, range_to]
+    :return: dictionary with parameter: range
     """
     return {'LOGBB': 1, 'solubility': 13}
+
 
 def create_file_with_processed_data(in_fname, parameters):
     with open(in_fname, 'w+') as f:
@@ -19,6 +21,7 @@ def create_file_with_processed_data(in_fname, parameters):
         first_line += 'average\n'
         f.write(first_line)
     return f
+
 
 def get_predicted_value_for_whole_compound(in_file, parameters):
     predicted_values = {}
@@ -39,16 +42,23 @@ def get_predicted_value_for_whole_compound(in_file, parameters):
 
 def compute_normalized_value(in_value, predicted_value, threshold, range):
     if threshold[0] == 'more':
-        return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
+        if threshold[1] <= predicted_value:
+            return abs(in_value)
+        else:
+            return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
     elif threshold[0] == 'less':
-        return -(2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1)
+        if threshold[1] >= predicted_value:
+            return abs(in_value)
+        else:
+            return -(2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1)
     # between
     else:
-        if predicted_value >= threshold[2]:
+        if predicted_value <= threshold[2] and predicted_value >= threshold[1]:
+            return abs(in_value)
+        elif predicted_value > threshold[2]:
             return -(2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1)
         else:
             return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
-    return 0
 
 
 def normalize_contributions(in_fname, parameters, predicted_values, thresholds, ranges):
@@ -63,9 +73,11 @@ def normalize_contributions(in_fname, parameters, predicted_values, thresholds, 
                     line = line.split('\t')
 
                     norm_value = compute_normalized_value(
-                        float(line[5]), predicted_values, thresholds[number_of_parameter], ranges[parameter])
+                        float(line[5]),                         # fragment contributions
+                        predicted_values[line[0]][parameter],   # predicted parameter value of compound
+                        thresholds[number_of_parameter],        # threshold for parameter
+                        ranges[parameter])                      # range of parameter
 
-                    # print(line_number)
                     if number_of_parameter == 0:
                         list_of_contributions.append([norm_value])
                     else:
@@ -119,4 +131,5 @@ number_of_fragments = normalize_contributions(in_fname, parameters, predicted_va
 number_of_worst_fragments = 50
 
 worst_list = pick_worst_ones(in_fname, number_of_worst_fragments)
-print(worst_list)
+
+
