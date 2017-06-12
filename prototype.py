@@ -251,14 +251,16 @@ for gen in range(num_of_gen):
     predict_properties(paramaters_to_predict, x_fname, output_format, models, models_dir, models_type)
 
     # process predictions
-    methods = ['filtering', 'pareto']
-    thresholds =['more0.5', 'more-2']
+    # methods = ['filtering', 'pareto', 'desirability']
+    methods = ['desirability']
+    thresholds =['more0.5', 'more-2', 'desirability_0.45:0,0.55:10*x-4.5,1000:1_-2.1:0,-1.9:5*x+10.5,1000:1#5']
+    # thresholds =['more0.5', 'more-2']
     # for testing bounded_box = False
     bounded_box = False
     process_prediction(std_lbl_sdf_file, predictions, paramaters_to_predict, 'output.sdf', methods, thresholds, bounded_box)
 
     # input to modification part
-    output_sdf_file = os.path.dirname(input_sdf_file) + '/output_pareto.sdf'
+    output_sdf_file = os.path.dirname(input_sdf_file) + '/output_process_predictions.sdf'
 
     # calculate fragment ids
     smarts_string = "[#6+0;!$(*=,#[!#6])]!@!=!#[*]"

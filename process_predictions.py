@@ -5,6 +5,9 @@ import argparse
 import numpy as np
 import pareto_simple_cull as pareto_alg
 
+from sympy import symbols
+from sympy.parsing.sympy_parser import parse_expr
+
 
 # --------------------------Saving outputs--------------------------
 # save output dictionary to file with predicted values
@@ -14,7 +17,7 @@ import pareto_simple_cull as pareto_alg
 #               input_dict: output dictionary where are selected compounds stored,
 #                            e.g. {'filtering': [[id1, predicted_value1, predicted_value2],[...]], 'pareto':[[...]]}
 #               predictions: list of parameters name, e.g. ['logBB', 'solubility', ...]
-def save_output(input_sdf, output_file, input_dict, predictions):
+def save_output(input_sdf, output_file, input_dict, parameters_to_predict):
     output_string = ''
     # prepare list of files
     list_of_files = []
@@ -31,7 +34,7 @@ def save_output(input_sdf, output_file, input_dict, predictions):
                     for line in iter_file:
                         line = line.rstrip()
                         if '$$$$' in line:
-                            for index_of_predictions, predict in enumerate(predictions):
+                            for index_of_predictions, predict in enumerate(parameters_to_predict):
                                 output_string += '>  <' + predict + '>\n' + str(item[1 + index_of_predictions]) + '\n\n'
                             output_string += line + '\n'
                             break
@@ -56,21 +59,24 @@ def save_output(input_sdf, output_file, input_dict, predictions):
 # output format: return prepared array in format [id, predicted_value1, predicted_value2, ...]
 
 # if ad is specified, return only compounds which are in ad
-def prepare_array(input_pred, bounded_box, predictions):
-    in_data = np.genfromtxt(input_pred, dtype=None, delimiter='\t')
+def prepare_array(input_pred, bounded_box, parameters_to_predict):
+    # load and prepare data to numpy array
+    working_list = []
+    with open(input_pred, 'r') as in_f:
+        for line in in_f:
+            if '#' in line:
+                pass
+            else:
+                line = [cell.strip() for cell in line.split('\t')]
+                working_list.append([int(line[0])])
+                working_list[-1].append(float(line[-2]))
 
-    working_arr = np.asarray([[in_data[0][0], in_data[0][-2], in_data[0][-1]]])
-    for item in in_data[1:]:
-        working_arr = np.append(working_arr, [[item[0], item[-2], item[-1]]], axis=0)
-
-    # -2 prediction column, -1 bounded box column
-    if bounded_box:
-        working_arr = working_arr[:, [0, -2, -1]]
-    else:
-        working_arr = working_arr[:, [0, -2]]
+                if bounded_box:
+                    working_list[-1].append(line[-1] == 'True')
+    working_arr = np.array(working_list)
 
     # split data after all predictions
-    working_arr = np.split(working_arr, len(predictions), axis=0)
+    working_arr = np.split(working_arr, len(parameters_to_predict), axis=0)
 
     # add to final_array first column with ids
     final_ar = working_arr[0]
@@ -84,9 +90,9 @@ def prepare_array(input_pred, bounded_box, predictions):
 
     # filter array if bound_box
     if bounded_box:
-        for i in range(len(predictions)):
+        for i in range(len(parameters_to_predict)):
             final_ar = final_ar[final_ar[:, 2 * i + 2] == 1]
-        return final_ar[:, [0] + [i * 2 + 1 for i in range(len(predictions))]]
+        return final_ar[:, [0] + [i * 2 + 1 for i in range(len(parameters_to_predict))]]
     else:
         return final_ar
 
@@ -94,17 +100,23 @@ def prepare_array(input_pred, bounded_box, predictions):
 # convert input thresholds to parsed 2D list
 # input format: thresholds: list of thresholds, e.g. ['more4', 'betwenn-0.5to1', less'-2']
 # output format: return list of parsed threshold, e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
-def parse_threshold(thresholds):
+def parse_threshold_pareto_filtering(thresholds):
     threshold_match = []
     for threshold in thresholds:
         if 'less' in threshold:
             threshold_match.append(['less', float(threshold[4:])])
         elif 'more' in threshold:
             threshold_match.append(['more', float(threshold[4:])])
-        else:
+        elif 'between' in threshold:
             threshold_match.append(
                 ['between', float(threshold[7:].split('to')[0]), float(threshold[7:].split('to')[1])])
     return threshold_match
+
+
+def parse_threshold_desirability(thresholds):
+    for threshold in thresholds:
+        if 'desirability' in threshold:
+            return threshold.split('#')[0].split('_')[1:], int(threshold.split('#')[1][0])
 
 
 # --------------------------Filtering--------------------------
@@ -154,7 +166,7 @@ def get_distance_from_threshold(col, threshold_type, threshold_value1, threshold
 #               thresholds: parsed thresholds with format e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
 #               predictions: list of parameters which you want to predict, e.g. ['logBB', 'solubility']
 # output format: return array of compounds which lies on pareto frontier in same format as working_ar
-def pareto(input_sdf, working_ar, thresholds, predictions):
+def pareto(input_sdf, working_ar, thresholds, parameters_to_predict):
     # vectorize calculation of distances
     get_distance = np.vectorize(get_distance_from_threshold, otypes=[np.float64])
 
@@ -179,7 +191,7 @@ def pareto(input_sdf, working_ar, thresholds, predictions):
     # if some compounds match the threshold
     if len(output) != 0:
         match_threshold_output['pareto'] = output
-        save_output(input_sdf, 'output_match.sdf', match_threshold_output, predictions)
+        save_output(input_sdf, 'output_match.sdf', match_threshold_output, parameters_to_predict)
         # clear the output
         output = []
         # remove rows which are in output
@@ -199,23 +211,73 @@ def pareto(input_sdf, working_ar, thresholds, predictions):
     return output
 
 
-def main_params(input_sdf, input_pred, predictions, output_file, methods, thresholds, use_bounded_box):
-    # preparing variables
+# --------------------------Desirability functions--------------------------
+def process_function(in_function):
+    functions = []
+    for fnc in in_function:
+        fnc = fnc.split(',')
+        for index, fun in enumerate(fnc):
+            fnc[index] = [fun.split(":")[0]]  + [parse_expr(fun.split(":")[1])]
+        functions.append(fnc)
+    return functions
 
-    # parse threshold
-    threshold_match = parse_threshold(thresholds)
+
+def get_norm_value(function, x_input):
+    x = symbols("x")
+    for index, bound in enumerate(function):
+        if round(x_input, 5) <= float(bound[0]): return float(function[index][1].subs(x, x_input))
+    return 0
+
+
+def desirability(input_sdf, working_ar, threshold_filtering, threshold_desire, number_of_compounds, parameters_to_predict):
+
+    # filter compounds which match the threshold
+    match_threshold_output = {}
+    output = filtering(working_ar.copy(), threshold_filtering)
+    match_threshold_output['match'] = output
+    save_output(input_sdf, 'output.sdf', match_threshold_output, parameters_to_predict)
+
+    # delete filtered compounds from working array
+    for id in output[:, 1]:
+        working_ar = working_ar[working_ar[:, 1] != id]
+
+    working_ar = np.hstack((working_ar, np.zeros((working_ar.shape[0], 1))))
+    functions = process_function(threshold_desire)
+
+    if number_of_compounds > working_ar.shape[0]:
+        number_of_compounds = working_ar.shape[0]
+
+    number_of_parameters = len(functions)
+    for index, row in enumerate(working_ar):
+        row_average = 0
+        for predictions, fnc in zip(row[1:-1], functions):
+            row_average += get_norm_value(fnc, predictions)
+        working_ar[index, -1] = row_average / number_of_parameters
+
+    tmp_arr = working_ar[working_ar[:, -1].argsort()][::-1][:number_of_compounds, :-1]
+    return tmp_arr[tmp_arr[:, 0].argsort()]
+
+def main_params(input_sdf, input_pred, parameters_to_predict, output_file, methods, thresholds, use_bounded_box):
+
+    # preparing threshold for filtering or pareto
+    threshold_match = parse_threshold_pareto_filtering(thresholds.copy())
+
+    #prepare array
+    working_array = prepare_array(input_pred, use_bounded_box, parameters_to_predict)
 
     # output dictionary
     output = {}
+
     if 'filtering' in methods:
-        working_array = prepare_array(input_pred, use_bounded_box, predictions)
-        output['filtering'] = filtering(working_array, threshold_match)
-    if 'pareto' in methods:
-        working_array = prepare_array(input_pred, use_bounded_box, predictions)
-        output['pareto'] = pareto(input_sdf, working_array, threshold_match, predictions)
+        output['process_predictions'] = filtering(working_array, threshold_match)
+    elif 'pareto' in methods:
+        output['process_predictions'] = pareto(input_sdf, working_array, threshold_match, parameters_to_predict)
+    else: # desirability
+        threshold_desire, number_of_compounds = parse_threshold_desirability(thresholds)
+        output['process_predictions'] = desirability(input_sdf, working_array, threshold_match, threshold_desire, number_of_compounds, parameters_to_predict)
 
     # save outputs to coresponding files
-    save_output(input_sdf, output_file, output, predictions)
+    save_output(input_sdf, output_file, output, parameters_to_predict)
 
 
 def main():

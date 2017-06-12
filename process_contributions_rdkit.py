@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 from rdkit import Chem
-from process_predictions import parse_threshold
+from process_predictions import parse_threshold_pareto_filtering
 import math
 import numpy as np
+from collections import defaultdict
+
 
 def get_ranges():
     """
@@ -57,41 +59,76 @@ def compute_normalized_value(in_value, predicted_value, threshold, range):
             return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
 
 
-def normalize_contributions(in_fname, parameters, predicted_values, thresholds, ranges):
-    with open(in_fname, 'a') as in_file:
-        list_of_contributions = list()
-        for number_of_parameter, parameter in enumerate(parameters):
-            with open('contrib_' + parameter + '.txt', 'r') as contrib_f:
-                string_to_write_to_file = ''
-                contrib_f.readline()
+def compute_average_from_models(frags, models):
+    for compound_id, frag_id in frags.items():
+        for frag_id, values in frag_id.items():
+            property_avg = sum(values[-len(models):])/len(models)
+            for i in range(len(models)):
+                frags[compound_id][frag_id].pop()
+            frags[compound_id][frag_id].append(property_avg)
+    return frags
 
-                for line_number, line in enumerate(contrib_f.readlines()):
-                    line = line.split('\t')
+
+def get_string_of_dict(frags):
+    number_of_fragments = 0
+    output_string = ""
+    for compound_id, frag_id in frags.items():
+        for frag_id, values in frag_id.items():
+            output_string += compound_id + '\t' + frag_id + '\t'
+            output_string += \
+                ''.join([str(norm_value) + '\t' for norm_value in frags[compound_id][frag_id]])
+            output_string += '\n'
+            number_of_fragments += 1
+    return output_string, number_of_fragments
+
+
+def normalize_contributions(in_fname, parameters, predicted_values, thresholds, ranges, models):
+    with open(in_fname, 'a') as in_file:
+
+        frags = defaultdict(dict)
+
+        with open('contrib_' + parameters[0] + '.txt', 'r') as contrib_f:
+            contrib_f.readline()
+            for line in contrib_f:
+                line = [l.strip() for l in line.split('\t')]
+
+                norm_value = compute_normalized_value(
+                    float(line[5]),  # fragment contributions
+                    predicted_values[line[0]][parameters[0]],  # predicted parameter value of compound
+                    thresholds[0],  # threshold for parameter
+                    ranges[parameters[0]])  # range of parameter
+
+                try:
+                    frags[line[0]][line[2]].append(norm_value)
+                except:
+                    frags[line[0]][line[2]] = []
+                    frags[line[0]][line[2]].append(norm_value)
+
+            frags = compute_average_from_models(frags, models[0])
+
+        for i, parameter in enumerate(parameters[1:]):
+            file_name = 'contrib_' + parameter + '.txt'
+            with open(file_name, 'r') as contrib_f:
+                contrib_f.readline()
+                for line in contrib_f:
+                    line = [l.strip() for l in line.split('\t')]
 
                     norm_value = compute_normalized_value(
-                                    float(line[5]),                         # fragment contributions
-                                    predicted_values[line[0]][parameter],   # predicted parameter value of compound
-                                    thresholds[number_of_parameter],        # threshold for parameter
-                                    ranges[parameter])                      # range of parameter
+                        float(line[5]),  # fragment contributions
+                        predicted_values[line[0]][parameter],  # predicted parameter value of compound
+                        thresholds[i+1],  # threshold for parameter
+                        ranges[parameter])  # range of parameter
 
-                    if number_of_parameter == 0:
-                        list_of_contributions.append([norm_value])
-                    else:
-                        list_of_contributions[line_number].append(norm_value)
+                    frags[line[0]][line[2]].append(norm_value)
+                frags = compute_average_from_models(frags, models[i + 1])
 
-                    # if it is last parameter, we need to compute average of normalized values and construct string
-                    # which will be added to file
-                    if number_of_parameter == len(parameters) - 1:
-                        string_to_write_to_file = line[0] + '\t' + line[2] + '\t'
-                        string_to_write_to_file += \
-                            ''.join([str(norm_value) + '\t' for norm_value in list_of_contributions[line_number]])
-                        average = sum(list_of_contributions[line_number])/len(list_of_contributions[line_number])
-                        string_to_write_to_file += str(average)
-
-                        in_file.write(string_to_write_to_file + '\n')
-                        string_to_write_to_file = ''
-                number_of_fragments = line_number + 1
-    return line_number
+        for compound_id, frag_id in frags.items():
+            for frag_id, values in frag_id.items():
+                property_avg = sum(values[-len(parameters):]) / len(parameters)
+                frags[compound_id][frag_id].append(property_avg)
+        output_string, number_of_fragments = get_string_of_dict(frags)
+        in_file.write(output_string)
+    return number_of_fragments
 
 
 
@@ -100,7 +137,7 @@ def pick_worst_ones(in_fname, number_of_fragments, number_of_compounds):
     normalized_array = np.genfromtxt(
         in_fname,
         skip_header=1,
-        usecols=(0, 1, -1),
+        usecols=(0, 1, -2),
         dtype=None,
         names=['compound_id', 'fragment_id', 'average_contrib'],
         delimiter='\t')
@@ -124,14 +161,15 @@ def pick_worst_ones(in_fname, number_of_fragments, number_of_compounds):
 
 
 in_fname = 'fragment_contrib_norm.txt'
+models = [['svm'], ['rf', 'svm']]
 parameters = ['LOGBB', 'solubility']
 pred_file = 'output_pareto.sdf'
 thresholds =['more0.5', 'more-2']
 
 processed_file = create_file_with_processed_data(in_fname, parameters)
 predicted_values, number_of_compounds = get_predicted_value_for_whole_compound(pred_file, parameters)
-thresholds = parse_threshold(thresholds)
-number_of_fragments = normalize_contributions(in_fname, parameters, predicted_values, thresholds, get_ranges())
+thresholds = parse_threshold_pareto_filtering(thresholds)
+number_of_fragments = normalize_contributions(in_fname, parameters, predicted_values, thresholds, get_ranges(), models)
 
 # we can't specify more worst fragments then we have
 number_of_worst_fragments = 10
