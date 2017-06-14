@@ -4,12 +4,15 @@ import sys
 import shutil
 
 from subprocess import call
-from spci import calc_atomic_properties_chemaxon
-from spci import filter_descriptors
-from spci import predict
-from spci import find_frags_auto_rdkit as find_frags
-from spci import calc_frag_contrib as calc_contrib
+sys.path.insert(1, os.path.join(sys.path[0], 'spci'))
+
+import calc_atomic_properties_chemaxon
+import filter_descriptors
+import predict
+import find_frags_auto_rdkit as find_frags
+import calc_frag_contrib as calc_contrib
 import process_predictions
+import process_contributions_rdkit
 
 sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
 import sirms
@@ -159,12 +162,14 @@ def process_prediction(input_sdf, input_pred, parameters, output_file, methods, 
     print("Processing prediction is finished")
 
 
-def find_frags_rdkit(input_sdf_file, fragment_ids_file, smarts_string, max_cuts, verbose, error_fname):
+def find_frags_rdkit(input_sdf_file, fragment_ids_file, smarts_string, max_cuts, radius, keep_stereo, verbose, error_fname):
     print("Finding fragments has started")
     find_frags.main_params(in_sdf=input_sdf_file,
                                 out_txt=fragment_ids_file,
                                 query=smarts_string,
                                 max_cuts=max_cuts,
+                                radius = radius,
+                                keep_stereo = keep_stereo,
                                 verbose=verbose,
                                 error_fname=error_fname)
 
@@ -193,6 +198,21 @@ def calc_frag_contrib(x_fname, parameters, models, models_dir, properties, model
         f.close()
         os.remove('predictions_' + parameter + '.txt')
         """
+
+def process_contributions(input_sdf, frag_norm_output_file, worst_output_file, parameters_to_predict, models, thresholds,
+                number_of_worst_fragments):
+    print("Processing contributions has started")
+    process_contributions_rdkit.main_params(input_sdf,
+                                        frag_norm_output_file,
+                                        worst_output_file,
+                                        parameters_to_predict,
+                                        models,
+                                        thresholds,
+                                        number_of_worst_fragments)
+    print("Processing contributions is finished")
+
+
+
 
 # number of generation
 num_of_gen = 1
@@ -252,9 +272,9 @@ for gen in range(num_of_gen):
 
     # process predictions
     # methods = ['filtering', 'pareto', 'desirability']
-    methods = ['desirability']
-    thresholds =['more0.5', 'more-2', 'desirability_0.45:0,0.55:10*x-4.5,1000:1_-2.1:0,-1.9:5*x+10.5,1000:1#5']
-    # thresholds =['more0.5', 'more-2']
+    methods = ['pareto']
+    # thresholds =['more0.5', 'more-2', 'desirability_0.45:0,0.55:10*x-4.5,1000:1_-2.1:0,-1.9:5*x+10.5,1000:1#5']
+    thresholds =['more0.5', 'more-2']
     # for testing bounded_box = False
     bounded_box = False
     process_prediction(std_lbl_sdf_file, predictions, paramaters_to_predict, 'output.sdf', methods, thresholds, bounded_box)
@@ -267,7 +287,9 @@ for gen in range(num_of_gen):
     max_cuts = 3
     find_frags_verbose = False
     error_fname = os.path.dirname(input_sdf_file) + '/fragments_log.log'
-    find_frags_rdkit(output_sdf_file, fragment_ids_file, smarts_string, max_cuts, find_frags_verbose, error_fname)
+    radius = [3]
+    keep_stereo = False
+    find_frags_rdkit(output_sdf_file, fragment_ids_file, smarts_string, max_cuts, radius, keep_stereo, find_frags_verbose, error_fname)
 
     # calculate sirms descriptors using fragments
     calculate_sirms_descriptors(output_sdf_file, setup_file, properties_sirms,
@@ -277,8 +299,15 @@ for gen in range(num_of_gen):
     calc_frag_contrib(fragment_x_fname, paramaters_to_predict, models, models_dir, properties_calc_contrib, models_type,
                       output_format)
 
+    # find worst fragments
+    models_contrib = ['gbm_svm', 'rf_svm']  # different format of models, because of calling from terminal
+    number_of_worst_fragments = 5
+    process_contributions(output_sdf_file, 'fragment_contrib_norm.txt', 'worst_fragments.txt', paramaters_to_predict,
+                                 models_contrib, thresholds, number_of_worst_fragments)
+
+    # fragment replacements
+
     # end - for creating new folder with new generation we have to prepare some path variables
-    # input_sdf_file = os.path.dirname(input_sdf_file) + '/output_from_gen.sdf'
     os.chdir(home_dir)
     working_dir = home_dir
 

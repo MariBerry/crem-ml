@@ -9,15 +9,20 @@ from sympy import symbols
 from sympy.parsing.sympy_parser import parse_expr
 
 
-# --------------------------Saving outputs--------------------------
-# save output dictionary to file with predicted values
-# input format: input_sdf: path to standardized and labeled sdf file which you used for prediction
-#               output_file: name of output file, it will be processed according to predictions,
-#                            e.g. output.sdf -> output_filtering.sdf/output_pareto.sdf
-#               input_dict: output dictionary where are selected compounds stored,
-#                            e.g. {'filtering': [[id1, predicted_value1, predicted_value2],[...]], 'pareto':[[...]]}
-#               predictions: list of parameters name, e.g. ['logBB', 'solubility', ...]
+# --------------------------Saving predictions--------------------------
 def save_output(input_sdf, output_file, input_dict, parameters_to_predict):
+
+    """
+    Save output dictionary to file with predicted values
+    :param input_sdf: path to standardized and labeled sdf file which you used for prediction
+    :param output_file: name of output file, it will be processed according to predictions,
+                        e.g. output.sdf -> output_filtering.sdf/output_pareto.sdf
+    :param input_dict: output dictionary where are selected compounds stored,
+                       e.g. {'filtering': [[id1, predicted_value1, predicted_value2],[...]], 'pareto':[[...]]}
+    :param parameters_to_predict: list of parameters, e.g. ['logBB', 'solubility', ...]
+    :return: save output dictionary to file with predicted values
+    """
+
     output_string = ''
     # prepare list of files
     list_of_files = []
@@ -51,15 +56,15 @@ def save_output(input_sdf, output_file, input_dict, parameters_to_predict):
 
 
 # --------------------------Preparing variables--------------------------
-# prepares numpy array of predicted values for compounds
-
-# input format: input_pred: path to file with predictions,
-#               bounded_box: True/False,
-#               predictions: list of parameters which you want to predict, e.g. ['logBB', 'solubility']
-# output format: return prepared array in format [id, predicted_value1, predicted_value2, ...]
-
-# if ad is specified, return only compounds which are in ad
 def prepare_array(input_pred, bounded_box, parameters_to_predict):
+    """
+    Prepares numpy array of predicted values for compounds
+    :param input_pred: path to file with predictions
+    :param bounded_box: True/False
+    :param parameters_to_predict: list of parameters which you want to predict, e.g. ['logBB', 'solubility']
+    :return: prepared array in format [id, predicted_value1, predicted_value2, ...]
+    """
+
     # load and prepare data to numpy array
     working_list = []
     with open(input_pred, 'r') as in_f:
@@ -97,10 +102,14 @@ def prepare_array(input_pred, bounded_box, parameters_to_predict):
         return final_ar
 
 
-# convert input thresholds to parsed 2D list
-# input format: thresholds: list of thresholds, e.g. ['more4', 'betwenn-0.5to1', less'-2']
-# output format: return list of parsed threshold, e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
 def parse_threshold_pareto_filtering(thresholds):
+    """
+    Convert input thresholds to parsed 2D list
+    :param thresholds: list of thresholds, e.g. ['more4', 'betwenn-0.5to1', less'-2']
+    :return: list of parsed threshold, e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
+    """
+
+
     threshold_match = []
     for threshold in thresholds:
         if 'less' in threshold:
@@ -114,17 +123,29 @@ def parse_threshold_pareto_filtering(thresholds):
 
 
 def parse_threshold_desirability(thresholds):
+    """
+    Convert input threshold for desirability to tuple
+    :param thresholds: list of thresholds, e.g.
+                    ['more4', 'betwenn-0.5to1', 'desirability_0.45:0,0.55:10*x-4.5,1000:1_-2.1:0,-1.9:5*x+10.5,1000:1#5']
+    :return: list e.g.
+                    ['0.45:0,0.55:10*x-4.5,1000:1', '-2.1:0,-1.9:5*x+10.5,1000:1'], 5
+                    where first part is list of functions and second part is number of compounds
+    """
+
     for threshold in thresholds:
         if 'desirability' in threshold:
             return threshold.split('#')[0].split('_')[1:], int(threshold.split('#')[1][0])
 
 
 # --------------------------Filtering--------------------------
-# filter rows according to threshold
-# input format: working_ar: numpy array with format [id, predicted_value1, predicted_value2, ...],
-#               thresholds: parsed thresholds with format e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
-# output format: return filtered array in same format as working_ar
 def filtering(working_ar, thresholds):
+    """
+    Filter rows according to threshold
+    :param working_ar: numpy array with format [id, predicted_value1, predicted_value2, ...]
+    :param thresholds: parsed thresholds with format e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
+    :return: filtered array in same format as working_ar
+    """
+
     for index_of_threshold, threshold in enumerate(thresholds):
         if threshold[0] == 'more':
             working_ar = working_ar[working_ar[:, index_of_threshold + 1] > threshold[1]]
@@ -137,15 +158,17 @@ def filtering(working_ar, thresholds):
 
 
 # --------------------------Pareto--------------------------
-
-# computes simple distance from predicted values, which are stored in 1D array
-# input format: col: 1D numpy array with predicted values,
-#                    threshold_type: string with type of threshold, e.g. 'more', 'less', 'between'
-#                    threshold_value1: float value
-#                    threshold_value2: if threshold_type == 'between': second value of threshold, else: None
-# output format: return 1D numpy array with computed distances to coresponding threshold
-#                if predicted value match the threshold, then return 0
 def get_distance_from_threshold(col, threshold_type, threshold_value1, threshold_value2=None):
+    """
+    Computes simple distance from predicted values, which are stored in 1D array
+    :param col: 1D numpy array with predicted values
+    :param threshold_type: string with type of threshold, e.g. 'more', 'less', 'between'
+    :param threshold_value1: float value
+    :param threshold_value2: if threshold_type == 'between': second value of threshold, else: None
+    :return: 1D numpy array with computed distances to coresponding threshold
+#            if predicted value match the threshold, then return 0
+    """
+
     if threshold_type == 'more':
         if col >= threshold_value1: return 0
         else: return threshold_value1 - col
@@ -159,14 +182,17 @@ def get_distance_from_threshold(col, threshold_type, threshold_value1, threshold
             return threshold_value1 - col if col < threshold_value1 else col - threshold_value2
 
 
-# it finds compounds which lies on pareto frontier, also if some compounds match the threshold,
-# it saves them into separate file called output_match_pareto.sdf
-# input format: input_sdf: path to standardized and labeled sdf file which you used for prediction
-#               working_ar: numpy array with format [id, predicted_value1, predicted_value2, ...],
-#               thresholds: parsed thresholds with format e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
-#               predictions: list of parameters which you want to predict, e.g. ['logBB', 'solubility']
-# output format: return array of compounds which lies on pareto frontier in same format as working_ar
 def pareto(input_sdf, working_ar, thresholds, parameters_to_predict):
+    """
+    It finds compounds which lies on pareto frontier, also if some compounds match the threshold,
+    it saves them into separate file called output_match_pareto.sdf
+    :param input_sdf: path to standardized and labeled sdf file which you used for prediction
+    :param working_ar: numpy array with format [id, predicted_value1, predicted_value2, ...]
+    :param thresholds: parsed thresholds with format e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
+    :param parameters_to_predict: list of parameters which you want to predict, e.g. ['logBB', 'solubility']
+    :return: array of compounds which lies on pareto frontier in same format as working_ar
+    """
+
     # vectorize calculation of distances
     get_distance = np.vectorize(get_distance_from_threshold, otypes=[np.float64])
 
@@ -213,6 +239,11 @@ def pareto(input_sdf, working_ar, thresholds, parameters_to_predict):
 
 # --------------------------Desirability functions--------------------------
 def process_function(in_function):
+    """
+    It parses list of function to special format
+    :param in_function: list of functions from parse_threshold_desirability()
+    :return: special list of functions, e.g. [['0.45', 0], ['0.55', 10*x - 4.5], ['1000', 1]] - one desirability function
+    """
     functions = []
     for fnc in in_function:
         fnc = fnc.split(',')
@@ -223,6 +254,13 @@ def process_function(in_function):
 
 
 def get_norm_value(function, x_input):
+    """
+    It returns scaled value between 0 - 1, according to desirability function
+    :param function: desirability function, e.g. [['0.45', 0], ['0.55', 10*x - 4.5], ['1000', 1]]
+    :param x_input: value
+    :return: scaled value
+    """
+
     x = symbols("x")
     for index, bound in enumerate(function):
         if round(x_input, 5) <= float(bound[0]): return float(function[index][1].subs(x, x_input))
@@ -230,6 +268,16 @@ def get_norm_value(function, x_input):
 
 
 def desirability(input_sdf, working_ar, threshold_filtering, threshold_desire, number_of_compounds, parameters_to_predict):
+    """
+    It finds best compounds according to desirability functions
+    :param input_sdf: path to standardized and labeled sdf file which you used for prediction
+    :param working_ar: numpy array with format [id, predicted_value1, predicted_value2, ...]
+    :param threshold_filtering: parsed thresholds with format e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
+    :param threshold_desire: threshold for desirability, e.g. ['0.45:0,0.55:10*x-4.5,1000:1', '-2.1:0,-1.9:5*x+10.5,1000:1']]
+    :param number_of_compounds: number of selected compounds
+    :param parameters_to_predict: list of parameters which you want to predict, e.g. ['logBB', 'solubility']
+    :return: array of compounds in same format as working_ar
+    """
 
     # filter compounds which match the threshold
     match_threshold_output = {}
@@ -289,11 +337,11 @@ def main():
                         help='path to file which contains predicted values for properties')
     parser.add_argument('-o', '--out', metavar='output.txt', required=True,
                         help='processed predictions with compounds, which match the threshold')
-    parser.add_argument('-p', '--properties', metavar='[LOGBB solubility]', required=True, nargs='*',
-                        help='predicted properties')
+    parser.add_argument('-p', '--parameters', metavar='[LOGBB solubility]', required=True, nargs='*',
+                        help='predicted parameters')
     parser.add_argument('-m', '--methods', metavar='[filtering pareto]', required=True, nargs='*',
                         help='define which method will be used for getting output file')
-    parser.add_argument('-t', '--thresholds', metavar='[>1.78 <12 -2.05to2.97]', required=True, nargs='*',
+    parser.add_argument('-t', '--thresholds', metavar='[less1.78 more12 -2.05to2.97]', required=True, nargs='*',
                         help='thresholds to be match, written in the same order as properties')
     parser.add_argument('-a', '--ad', action='store_true', default=False,
                         help='save to output file only if it is in the application domain')
@@ -303,13 +351,13 @@ def main():
         if o == "in_sdf": input_sdf = v
         if o == "in_pred": input_pred = v
         if o == "out": output_file = v
-        if o == "properties": predictions = v
+        if o == "parameters": parameters = v
         if o == "methods": methods = v
         if o == "thresholds": thresholds = v
         if o == "ad": use_bounded_box = v
         if o == "pareto": pareto = v
 
-    main_params(input_sdf, input_pred, predictions, output_file, methods, thresholds, use_bounded_box)
+    main_params(input_sdf, input_pred, parameters, output_file, methods, thresholds, use_bounded_box)
 
 
 if __name__ == '__main__':
