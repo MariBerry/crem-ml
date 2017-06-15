@@ -1,10 +1,13 @@
 # Pavel Polishchuk, 2017
 
 import sys
+import os
 import re
 from rdkit import Chem
 from rdkit.Chem import AllChem
 from rdkit.Chem import rdMMPA
+
+sys.path.insert(1, os.path.join(sys.path[0], 'spci'))
 from mol_context import get_canon_context_core
 
 
@@ -212,22 +215,22 @@ def mutate_mol(mol, db_cur, radius=3, min_size=1, max_size=10, min_rel_size=0, m
     return list(products.values())
 
 
-from pprint import pprint
-mm = Chem.MolFromSmiles('CC(C)Cc1ccc(cc1Br)C(C)C(=O)O')
-mm = Chem.AddHs(mm)
-f = __fragment_mol(mm, 3)
-pprint(f)
-
-
-frag_sma = '[H][*:1]'
-frag_ids = (32, )
-replace_sma = '[CH3][*:1]'
-
-r = __frag_replace(mm, frag_sma, replace_sma, frag_ids)
-
-print(Chem.MolToSmiles(mm, isomericSmiles=True))
-for item in r:
-    print(Chem.MolToSmiles(item, isomericSmiles=True))
+# from pprint import pprint
+# mm = Chem.MolFromSmiles('CC(C)Cc1ccc(cc1Br)C(C)C(=O)O')
+# mm = Chem.AddHs(mm)
+# f = __fragment_mol(mm, 3)
+# pprint(f)
+#
+#
+# frag_sma = '[H][*:1]'
+# frag_ids = (32, )
+# replace_sma = '[CH3][*:1]'
+#
+# r = __frag_replace(mm, frag_sma, replace_sma, frag_ids)
+#
+# print(Chem.MolToSmiles(mm, isomericSmiles=True))
+# for item in r:
+#     print(Chem.MolToSmiles(item, isomericSmiles=True))
 
 # for a in mm.GetAtoms():
 #     print(a.GetIdx(), a.GetSymbol())

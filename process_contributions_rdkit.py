@@ -192,7 +192,7 @@ def pick_worst_ones(file_norm_frag, file_worst_frag, number_of_fragments, number
         file_norm_frag,
         skip_header=1,
         usecols=(0, 1, 2, -2), # compound_id, fragment_id, fragment(name|context), average
-        dtype=['<i8', '<i8', 'S150', '<f16',],
+        dtype=['<i8', '<i8', '<U150', '<f16'],
         names=['compound_id', 'fragment_id', 'fragment', 'average_contrib'],
         delimiter='\t')
 
@@ -222,7 +222,11 @@ def pick_worst_ones(file_norm_frag, file_worst_frag, number_of_fragments, number
                 worst_list = np.append(worst_list, normalized_array[from_:to], axis=0)
                 break
 
-    np.savetxt(file_worst_frag ,worst_list, delimiter='\t', fmt="%d %d %s %.8f")
+    # np.savetxt(file_worst_frag, worst_list, delimiter='\t', fmt="%d %d %s %.8f")
+    with open(file_worst_frag, 'w') as worst_file:
+        for row in worst_list:
+            worst_file.write(str(row[0]) + '\t')
+            worst_file.write('\t'.join([str(item) for item in list(row)[1:]]) + '\n')
 
     return worst_list
 

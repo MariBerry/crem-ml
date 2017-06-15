@@ -307,6 +307,7 @@ for gen in range(num_of_gen):
 
     # fragment replacements
 
+
     # end - for creating new folder with new generation we have to prepare some path variables
     os.chdir(home_dir)
     working_dir = home_dir
