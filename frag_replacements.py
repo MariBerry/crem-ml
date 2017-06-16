@@ -34,8 +34,8 @@ def read_worst_and_ids(input_worst, input_ids):
             line = line.strip().split('\t')
             # join ids with fragments
             for i, fragment in enumerate(list_of_fragments):
-                if line[1] == fragment[2] + '|' + fragment[3]:                  # compare fragment_name|fragment_context
-                    list_of_fragments[i].append(list(map(int, line[2:])))       # append list of fragments ids
+                if line[1] == fragment[2] + '|' + fragment[3] and line[0] == fragment[0]:                  # compare fragment_name|fragment_context
+                    list_of_fragments[i].append(tuple(map(int, line[2:])))       # append list of fragments ids
                     break
 
     return list_of_fragments
@@ -50,7 +50,8 @@ def make_replacements(input_sdf, input_worst, input_ids, db_cur, radius=3, min_s
     list_of_fragments = read_worst_and_ids(input_worst, input_ids)
 
     for mol in compounds:
-        mol = Chem.AddHs(mol)
+        mol.UpdatePropertyCache()
+        # mol = Chem.AddHs(mol)
         mol_hac = mol.GetNumHeavyAtoms()
         mol_id = str(mol.GetProp('ID'))
 
@@ -95,8 +96,13 @@ input_sdf = 'output_process_predictions.sdf'
 input_worst = 'worst_fragments.txt'
 input_ids = 'fragment_ids.txt'
 
+output_product = 'new_compounds.sdf'
+
 conn = sqlite3.connect('../../replacement_chembl_cuts4_H.db')
 db_cur = conn.cursor()
 
-print(read_worst_and_ids(input_worst, input_ids))
-#print(make_replacements(input_sdf, input_worst, input_ids, db_cur))
+# print(read_worst_and_ids(input_worst, input_ids))
+products = make_replacements(input_sdf, input_worst, input_ids, db_cur)
+
+w = Chem.SDWriter(output_product)
+for m in products: w.write(m)
