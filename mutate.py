@@ -90,7 +90,7 @@ def __fragment_mol(mol, radius=3, return_ids=True, keep_stereo=False):
     return output  # list of tuples (env smiles, core smiles, list of atom ids)
 
 
-def __frag_replace(mol, frag_sma, replace_sma, frag_ids=None):
+def __frag_replace(mol, frag_sma, replace_sma, id_mol, frag_ids=None):
     """
     INPUT
         mol:         mol,
@@ -102,7 +102,6 @@ def __frag_replace(mol, frag_sma, replace_sma, frag_ids=None):
         list of mols with replaced fragment.
         Each output mol has a new field named 'transformation' with information about reaction SMARTS applied
     """
-
     frag_sma = frag_sma.replace('*', '!#1')    # to avoid map H in mol with explicit H (lead to wrong replacement)
     rxn_sma = "%s>>%s" % (frag_sma, replace_sma)
     rxn = AllChem.ReactionFromSmarts(rxn_sma)
@@ -132,10 +131,12 @@ def __frag_replace(mol, frag_sma, replace_sma, frag_ids=None):
             else:
                 smi = Chem.MolToSmiles(p, isomericSmiles=True)
                 if smi not in products:
+                    p.SetProp('_Name', str(id_mol))
                     p.SetProp('transformation', rxn_sma)
+                    p.SetProp('ID', str(id_mol))
+                    id_mol += 1
                     products[smi] = p
-
-    return list(products.values())
+    return list(products.values()), id_mol
 
 
 def mutate_mol(mol, db_cur, radius=3, min_size=1, max_size=10, min_rel_size=0, max_rel_size=1, min_inc=-2, max_inc=2, replace_cycles=False):
@@ -171,13 +172,13 @@ def mutate_mol(mol, db_cur, radius=3, min_size=1, max_size=10, min_rel_size=0, m
             db_cur.execute("""SELECT core_smi, core_sma
                               FROM radius3
                               WHERE env IN (SELECT env FROM radius3 WHERE env = ?)
-                                    AND 
+                                    AND
                                     core_num_atoms BETWEEN ? AND ?""", (env, min_atoms, max_atoms))
         elif radius == 2:
             db_cur.execute("""SELECT core_smi, core_sma
                               FROM radius2
                               WHERE env IN (SELECT env FROM radius2 WHERE env = ?)
-                                    AND 
+                                    AND
                                     core_num_atoms BETWEEN ? AND ?""", (env, min_atoms, max_atoms))
         return db_cur.fetchall()
 

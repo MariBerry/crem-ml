@@ -73,13 +73,12 @@ def prepare_array(input_pred, bounded_box, parameters_to_predict):
                 pass
             else:
                 line = [cell.strip() for cell in line.split('\t')]
-                working_list.append([int(line[0])])
+                working_list.append([int(line[0].split('_')[-1])])
                 working_list[-1].append(float(line[-2]))
 
                 if bounded_box:
-                    working_list[-1].append(line[-1] == 'True')
+                    working_list[-1].append(line[-1] == '1')
     working_arr = np.array(working_list)
-
     # split data after all predictions
     working_arr = np.split(working_arr, len(parameters_to_predict), axis=0)
 
@@ -97,7 +96,11 @@ def prepare_array(input_pred, bounded_box, parameters_to_predict):
     if bounded_box:
         for i in range(len(parameters_to_predict)):
             final_ar = final_ar[final_ar[:, 2 * i + 2] == 1]
-        return final_ar[:, [0] + [i * 2 + 1 for i in range(len(parameters_to_predict))]]
+        final_ar = final_ar[:, [0] + [i * 2 + 1 for i in range(len(parameters_to_predict))]]
+        if final_ar.shape[0] == 0:
+            print('No compounds with ad in all parameters.\nNeed to call it without ad.')
+            return prepare_array(input_pred, False, parameters_to_predict)
+        return final_ar
     else:
         return final_ar
 

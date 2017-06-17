@@ -13,11 +13,12 @@ import find_frags_auto_rdkit as find_frags
 import calc_frag_contrib as calc_contrib
 import process_predictions
 import process_contributions_rdkit
+import frag_replacements
 
 sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
 import sirms
 
-
+import datetime
 
 def quote_str(s):
     return "'%s'" % s
@@ -46,7 +47,6 @@ def standardize_sdf(input_sdf_file, std_rules_path, copy_rules=True):
                   '-o',
                   quote_str(std_sdf)]  # name of output file
     call(' '.join(run_params), shell=True)
-    print('Standardization finished')
 
 
 # calculate atomic properties with Chemaxon, it creates file with labeled compounds
@@ -61,7 +61,6 @@ def calculate_atomic_prop(input_std_sdf, chemaxon_path, properties):
                                                 properties,
                                                 None,
                                                 os.path.join(chemaxon_path, 'cxcalc'))
-    print('Atomic properties calculation finished')
 
 
 # calculate sirms descriptors
@@ -114,7 +113,6 @@ def calculate_sirms_descriptors(working_file, setup_path, properties, output_for
     filter_descriptors.main_params(in_fname=x_fname,
                                    out_fname=x_fname,
                                    file_format=output_format)
-    print("Descriptors calculation finished")
 
 
 # it creates file with predicted values
@@ -143,7 +141,6 @@ def predict_properties(parameters, x_fname, input_format, models, models_dir, mo
                             model_type=model_type,
                             ad=['bound_box'],
                             verbose=False)
-        print("Prediction for {} finished".format(parameter))
         f = open('predictions.txt', 'a')
         f.write(open('predictions_' + parameter + '.txt', 'r').read())
         f.close()
@@ -159,7 +156,6 @@ def process_prediction(input_sdf, input_pred, parameters, output_file, methods, 
                                     methods,
                                     thresholds,
                                     use_bounded_box)
-    print("Processing prediction is finished")
 
 
 def find_frags_rdkit(input_sdf_file, fragment_ids_file, smarts_string, max_cuts, radius, keep_stereo, verbose, error_fname):
@@ -172,8 +168,6 @@ def find_frags_rdkit(input_sdf_file, fragment_ids_file, smarts_string, max_cuts,
                                 keep_stereo = keep_stereo,
                                 verbose=verbose,
                                 error_fname=error_fname)
-
-    print("Finding fragments is finished")
 
 
 def calc_frag_contrib(x_fname, parameters, models, models_dir, properties, models_type, in_format):
@@ -191,7 +185,6 @@ def calc_frag_contrib(x_fname, parameters, models, models_dir, properties, model
                                       input_format=in_format,
                                       long_format=True,
                                       save_frag_ids=True)
-        print("Fragment contribution for {} finished".format(parameter))
         """
         f = open('predictions.txt', 'a')
         f.write(open('predictions_' + parameter + '.txt', 'r').read())
@@ -209,13 +202,18 @@ def process_contributions(input_sdf, frag_norm_output_file, worst_output_file, p
                                         models,
                                         thresholds,
                                         number_of_worst_fragments)
-    print("Processing contributions is finished")
 
-
+def fragment_replacements(input_sdf, input_worst, input_ids, input_connection_db, output_product_file):
+    print("Fragments replacements has started")
+    frag_replacements.main_params(input_sdf,
+                                    input_worst,
+                                    input_ids,
+                                    input_conn_db,
+                                    output_product_file)
 
 
 # number of generation
-num_of_gen = 1
+num_of_gen = 3
 
 pathname = os.path.dirname(sys.argv[0])
 script_dir = os.path.abspath(pathname)
@@ -233,7 +231,12 @@ for gen in range(num_of_gen):
     os.makedirs(generation_dir)
     shutil.copy2(input_sdf_file, generation_dir+'/')
 
-    os.rename(generation_dir + '/' + input_sdf_file.split('/')[-1], generation_dir + '/input_dataset.sdf')
+
+    if gen == 0:
+        os.rename(generation_dir + '/' + input_sdf_file.split('/')[-1], generation_dir + '/input_dataset.sdf')
+    else:
+        os.rename(input_sdf_file, generation_dir + '/input_dataset.sdf')
+
     input_sdf_file = generation_dir + '/input_dataset.sdf'
     working_dir = generation_dir
     os.chdir(working_dir)
@@ -249,7 +252,11 @@ for gen in range(num_of_gen):
     properties_sirms = ['CHARGE', 'LOGP', 'HB', 'REFRACTIVITY']
     properties_calc_contrib = ['overall']
     output_format = 'svm'
+    print(50*'_')
     print('Generation: ', gen)
+
+    start = datetime.datetime.now()
+    print(start)
 
     # standardization
     standardize_sdf(input_sdf_file, std_rules_file)
@@ -258,7 +265,7 @@ for gen in range(num_of_gen):
     calculate_atomic_prop(std_sdf_file, chemaxon_path, properties_chemaxon)
 
     # calculation of sirms descriptors
-    ncores = 4
+    ncores = 8
     calculate_sirms_descriptors(std_lbl_sdf_file, setup_file, properties_sirms, output_format, ncores)
 
     # with more properties to predict
@@ -272,11 +279,11 @@ for gen in range(num_of_gen):
 
     # process predictions
     # methods = ['filtering', 'pareto', 'desirability']
-    methods = ['pareto']
-    # thresholds =['more0.5', 'more-2', 'desirability_0.45:0,0.55:10*x-4.5,1000:1_-2.1:0,-1.9:5*x+10.5,1000:1#5']
-    thresholds =['more0.5', 'more-2']
+    methods = ['desirability']
+    thresholds =['more0.5', 'more-2', 'desirability_0.45:0,0.55:10*x-4.5,1000:1_-2.1:0,-1.9:5*x+10.5,1000:1#5']
+    # thresholds =['more0.5', 'more-2']
     # for testing bounded_box = False
-    bounded_box = False
+    bounded_box = True
     process_prediction(std_lbl_sdf_file, predictions, paramaters_to_predict, 'output.sdf', methods, thresholds, bounded_box)
 
     # input to modification part
@@ -301,14 +308,24 @@ for gen in range(num_of_gen):
 
     # find worst fragments
     models_contrib = ['gbm_svm', 'rf_svm']  # different format of models, because of calling from terminal
-    number_of_worst_fragments = 5
+    number_of_worst_fragments = 1
     process_contributions(output_sdf_file, 'fragment_contrib_norm.txt', 'worst_fragments.txt', paramaters_to_predict,
                                  models_contrib, thresholds, number_of_worst_fragments)
 
     # fragment replacements
+    input_sdf = 'output_process_predictions.sdf'
+    input_worst = 'worst_fragments.txt'
+    input_ids = 'fragment_ids.txt'
+    output_product = 'new_compounds.sdf'
+    input_conn_db = '/home/david/Documents/projects/dp/optimizer/replacement_chembl_cuts4_H.db'
 
+    fragment_replacements(input_sdf, input_worst, input_ids, input_conn_db, output_product)
 
+    end = datetime.datetime.now()
+    print(end)
+    print(end - start)
+
+    input_sdf_file = os.path.abspath('new_compounds.sdf')
     # end - for creating new folder with new generation we have to prepare some path variables
     os.chdir(home_dir)
     working_dir = home_dir
-
