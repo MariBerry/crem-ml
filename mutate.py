@@ -90,7 +90,7 @@ def __fragment_mol(mol, radius=3, return_ids=True, keep_stereo=False):
     return output  # list of tuples (env smiles, core smiles, list of atom ids)
 
 
-def __frag_replace(mol, frag_sma, replace_sma, id_mol, frag_ids=None):
+def __frag_replace(mol, frag_sma, replace_sma, frag_ids=None):
     """
     INPUT
         mol:         mol,
@@ -105,7 +105,6 @@ def __frag_replace(mol, frag_sma, replace_sma, id_mol, frag_ids=None):
     frag_sma = frag_sma.replace('*', '!#1')    # to avoid map H in mol with explicit H (lead to wrong replacement)
     rxn_sma = "%s>>%s" % (frag_sma, replace_sma)
     rxn = AllChem.ReactionFromSmarts(rxn_sma)
-
     if frag_ids:
         ids = set(frag_ids)
         # extend atom ids on neighbour atoms
@@ -120,7 +119,6 @@ def __frag_replace(mol, frag_sma, replace_sma, id_mol, frag_ids=None):
                 a.ClearProp('_protected')
 
     ps = rxn.RunReactants([mol])
-
     products = dict()
     for y in ps:
         for p in y:
@@ -130,16 +128,15 @@ def __frag_replace(mol, frag_sma, replace_sma, id_mol, frag_ids=None):
                 sys.stderr.flush()
             else:
                 smi = Chem.MolToSmiles(p, isomericSmiles=True)
+
                 if smi not in products:
-                    p.SetProp('_Name', str(id_mol))
                     p.SetProp('transformation', rxn_sma)
-                    p.SetProp('ID', str(id_mol))
-                    id_mol += 1
                     products[smi] = p
-    return list(products.values()), id_mol
+    return list(products.values())
 
 
-def mutate_mol(mol, db_cur, radius=3, min_size=1, max_size=10, min_rel_size=0, max_rel_size=1, min_inc=-2, max_inc=2, replace_cycles=False):
+def mutate_mol(mol, db_cur, radius=3, min_size=1, max_size=10, min_rel_size=0, max_rel_size=1, min_inc=-2,
+               max_inc=2, replace_cycles=False):
     """
     INPUT
         mol:      mol

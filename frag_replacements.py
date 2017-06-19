@@ -1,13 +1,16 @@
 import sys
 import os
 import argparse
+import re
 
 from rdkit import Chem
+from rdkit.Chem import rdMMPA
 import sqlite3
 
 from mutate import __frag_replace
-from mutate import smiles_to_smarts
+from mutate import smiles_to_smarts, get_canon_context_core
 
+cycle_pattern = re.compile("(?<!:)[1-9]+")
 
 
 def read_worst_and_ids(input_worst, input_ids):
@@ -42,10 +45,71 @@ def read_worst_and_ids(input_worst, input_ids):
     return list_of_fragments
 
 
-def make_replacements(input_sdf, input_worst, input_ids, db_cur, radius=3, min_size=1, max_size=10, min_rel_size=0,
-                      max_rel_size=1, min_inc=-2, max_inc=+2):
+def get_Hs(mol):
+    output = {}
+    mol.UpdatePropertyCache()
+    for atom in mol.GetAtoms():
+        atom.SetIntProp("Index", atom.GetIdx())
+    frags = rdMMPA.FragmentMol(mol, pattern="[#1]!@!=!#[!#1]", maxCuts=1, resultsAsMols=True, maxCutBonds=100)
+    for _, chains in frags:
+        components = list(Chem.GetMolFrags(chains, asMols=True))
+        ids_0 = get_atom_prop(components[0]) if return_ids else tuple()
+        ids_1 = get_atom_prop(components[1]) if return_ids else tuple()
+        if Chem.MolToSmiles(components[0]) != '[H][*:1]':  # context cannot be H
+            env, frag = get_canon_context_core(components[0], components[1], radius, keep_stereo)
+            output[ids_1[0]] = env
+        if Chem.MolToSmiles(components[1]) != '[H][*:1]':  # context cannot be H
+            env, frag = get_canon_context_core(components[1], components[0], radius, keep_stereo)
+            output[ids_0[0]] = env
+    return output
+
+
+def replace(in_mol, frag_core, frag_env, frag_ids, db_cur, min_atoms=0, max_atoms=0, radius=3):
+    new_mols = {}
+
+    frag_sma_core = smiles_to_smarts(frag_core)
+    if max_atoms == 0:
+        if radius == 3:
+            db_cur.execute("""SELECT core_smi, core_sma
+                              FROM radius3
+                              WHERE env IN (SELECT env FROM radius3 WHERE env = ?)""",
+                              (frag_env))
+        elif radius == 2:
+            db_cur.execute("""SELECT core_smi, core_sma
+                              FROM radius2
+                              WHERE env IN (SELECT env FROM radius3 WHERE env = ?)""",
+                              (frag_env))
+    else:
+        if radius == 3:
+            db_cur.execute("""SELECT core_smi, core_sma
+                              FROM radius3
+                              WHERE env IN (SELECT env FROM radius3 WHERE env = ?)
+                                    AND
+                                    core_num_atoms BETWEEN ? AND ?""", (frag_env, min_atoms, max_atoms))
+        elif radius == 2:
+            db_cur.execute("""SELECT core_smi, core_sma
+                              FROM radius2
+                              WHERE env IN (SELECT env FROM radius2 WHERE env = ?)
+                                    AND
+                                    core_num_atoms BETWEEN ? AND ?""", (frag_env, min_atoms, max_atoms))
+    rep = db_cur.fetchall()
+    for core_smi, core_sma in rep:
+        if core_smi != frag_core:
+            frag_replace_output = __frag_replace(in_mol, frag_sma_core, core_sma, frag_ids)
+            print(frag_replace_output)
+            for new_mol in frag_replace_output:
+                smi = Chem.MolToSmiles(new_mol, isomericSmiles=True)
+                if smi not in new_mols:
+                    new_mols[smi] = new_mol
+    return new_mols
+
+
+
+def make_replacements(input_sdf, input_worst, input_ids, db_cur, radius=3, min_size=0, max_size=8, min_rel_size=0,
+                      max_rel_size=1, min_inc=-2, max_inc=+2, replace_cycles=False):
 
     products = {}
+    id_mol = 0
 
     compounds = Chem.SDMolSupplier(input_sdf, removeHs=False, sanitize=False)
     list_of_fragments = read_worst_and_ids(input_worst, input_ids)
@@ -58,37 +122,28 @@ def make_replacements(input_sdf, input_worst, input_ids, db_cur, radius=3, min_s
 
         for fragment in list_of_fragments:
             if fragment[0] == mol_id:       # if we have same fragment from coresponging mol
+                # if min_size == 0:
+                #     h = get_Hs(mol)
+                #     adj_ids = set()
+                #     for atom_id in fragment[-1]:
+                #         for nei in mol.GetAtomWithIdx(atom_id).GetNeighbors():
+                #             adj_ids.add(nei.GetIdx())
+                #     inter = adj_ids.intersection(h)
+                #     for i in inter:
+                #         products.update(replace(mol, fragment[2], fragment[3], (i), db_cur))
+
                 num_heavy_atoms = Chem.MolFromSmiles(fragment[2]).GetNumHeavyAtoms()
                 hac_ratio = num_heavy_atoms / mol_hac
-
-                if (min_size <= num_heavy_atoms <= max_size) or (min_rel_size <= hac_ratio <= max_rel_size):
-
-                    frag_sma = smiles_to_smarts(fragment[2])
-
+                if ((min_size <= num_heavy_atoms <= max_size) or (min_rel_size <= hac_ratio <= max_rel_size)) or (replace_cycles and cycle_pattern.search(core)):
                     min_atoms = num_heavy_atoms + min_inc
                     max_atoms = num_heavy_atoms + max_inc
+                    products.update(replace(mol, fragment[2], fragment[3], fragment[-1], db_cur, min_atoms, max_atoms))
 
-                    if radius == 3:
-                        db_cur.execute("""SELECT core_smi, core_sma
-                                          FROM radius3
-                                          WHERE env IN (SELECT env FROM radius3 WHERE env = ?)
-                                                AND
-                                                core_num_atoms BETWEEN ? AND ?""", (fragment[3], min_atoms, max_atoms))
-                    elif radius == 2:
-                        db_cur.execute("""SELECT core_smi, core_sma
-                                          FROM radius2
-                                          WHERE env IN (SELECT env FROM radius2 WHERE env = ?)
-                                                AND
-                                                core_num_atoms BETWEEN ? AND ?""", (fragment[3], min_atoms, max_atoms))
-                    rep = db_cur.fetchall()
-                    id_mol = 0
-                    for core_smi, core_sma in rep:
-                        if core_smi != fragment[2]:
-                            frag_replace_output, id_mol = __frag_replace(mol, frag_sma, core_sma, id_mol, fragment[-1])
-                            for new_mol in frag_replace_output:
-                                smi = Chem.MolToSmiles(new_mol, isomericSmiles=True)
-                                if smi not in products:
-                                    products[smi] = new_mol
+
+    for mol in products:
+        mol.SetProp('_Name', str(id_mol))
+        id_mol += 1
+
     return list(products.values())
 
 

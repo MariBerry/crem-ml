@@ -14,7 +14,7 @@ def get_ranges():
     some external filed stored in coresponding model directory.
     :return: dictionary with parameter: e.g. {'LOGBB': 1, 'solubility': 13}
     """
-    return {'LOGBB': 1, 'solubility': 13}
+    return {'LOGBB': 1, 'solubility': 8}
 
 def create_file_with_processed_data(file_norm_contrib, parameters):
     """
@@ -63,18 +63,21 @@ def compute_normalized_value(in_value, predicted_value, threshold, range):
 
     if threshold[0] == 'more':
         if threshold[1] <= predicted_value:
-            return abs(in_value)
+            in_value =  abs(in_value)
+            return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
         else:
             return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
     elif threshold[0] == 'less':
         if threshold[1] >= predicted_value:
-            return abs(in_value)
+            in_value =  abs(in_value)
+            return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
         else:
             return -(2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1)
     # between
     else:
         if predicted_value <= threshold[2] and predicted_value >= threshold[1]:
-            return abs(in_value)
+            in_value = abs(in_value)
+            return 2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1
         elif predicted_value > threshold[2]:
             return -(2 * ((1 / (1 + math.exp((7 / range) * -in_value))) - 1) + 1)
         else:
@@ -287,4 +290,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
