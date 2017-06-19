@@ -222,9 +222,9 @@ def pareto(input_sdf, working_ar, thresholds, parameters_to_predict):
         match_threshold_output['pareto'] = output
         save_output(input_sdf, 'output_match.sdf', match_threshold_output, parameters_to_predict)
         # clear the output
-        output = []
+        # output = []
         # remove rows which are in output
-        working_ar = working_ar[np.logical_or.reduce([working_ar[:,i+1+len(thresholds)] != 0 for i in range(len(thresholds))])]
+        # working_ar = working_ar[np.logical_or.reduce([working_ar[:,i+1+len(thresholds)] != 0 for i in range(len(thresholds))])]
 
     # prepare points to pareto function, format [[dist1, dist2, ...], [dist1, dist2, ...], ...]
     input_to_pareto_function = working_ar[:, 0 + len(thresholds) + 1]
@@ -247,13 +247,20 @@ def process_function(in_function):
     :param in_function: list of functions from parse_threshold_desirability()
     :return: special list of functions, e.g. [['0.45', 0], ['0.55', 10*x - 4.5], ['1000', 1]] - one desirability function
     """
-    functions = []
-    for fnc in in_function:
-        fnc = fnc.split(',')
-        for index, fun in enumerate(fnc):
-            fnc[index] = [fun.split(":")[0]]  + [parse_expr(fun.split(":")[1])]
-        functions.append(fnc)
-    return functions
+
+    if type(in_function) == type(''):   # if we have only one function
+        function = in_function.split(",")
+        for index, fun in enumerate(function):
+            function[index] = [fun.split(":")[0]]  + [parse_expr(fun.split(":")[1])]
+        return function
+    else:
+        functions = []
+        for fnc in in_function:
+            fnc = fnc.split(',')
+            for index, fun in enumerate(fnc):
+                fnc[index] = [fun.split(":")[0]]  + [parse_expr(fun.split(":")[1])]
+            functions.append(fnc)
+        return functions
 
 
 def get_norm_value(function, x_input):
@@ -263,7 +270,7 @@ def get_norm_value(function, x_input):
     :param x_input: value
     :return: scaled value
     """
-
+    
     x = symbols("x")
     for index, bound in enumerate(function):
         if round(x_input, 5) <= float(bound[0]): return float(function[index][1].subs(x, x_input))
@@ -289,8 +296,8 @@ def desirability(input_sdf, working_ar, threshold_filtering, threshold_desire, n
     save_output(input_sdf, 'output.sdf', match_threshold_output, parameters_to_predict)
 
     # delete filtered compounds from working array
-    for id in output[:, 1]:
-        working_ar = working_ar[working_ar[:, 1] != id]
+    # for id in output[:, 1]:
+    #     working_ar = working_ar[working_ar[:, 1] != id]
 
     working_ar = np.hstack((working_ar, np.zeros((working_ar.shape[0], 1))))
     functions = process_function(threshold_desire)
