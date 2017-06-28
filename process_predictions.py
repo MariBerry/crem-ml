@@ -31,24 +31,30 @@ def save_output(input_sdf, output_file, input_dict, parameters_to_predict):
     for parameter, o_file in zip(input_dict.keys(), list_of_files):
         in_file = open(input_sdf, 'r')
         iter_file = iter(in_file)
+        not_find_beg = True
+        not_find_end = True
         for item in input_dict[parameter]:
-            for line in iter_file:
-                line = line.rstrip()
+            while not_find_beg:
+                line = in_file.readline().rstrip()
                 if str(int(item[0])) == line:
                     output_string += line + '\n'
-                    for line in iter_file:
-                        line = line.rstrip()
+                    while not_find_beg:
+                        line = in_file.readline().rstrip()
                         if '$$$$' in line:
                             for index_of_predictions, predict in enumerate(parameters_to_predict):
                                 output_string += '>  <' + predict + '>\n' + str(item[1 + index_of_predictions]) + '\n\n'
                             output_string += line + '\n'
-                            break
+                            not_find_end = False
+                            not_find_beg = False
                         else:
                             output_string += line + '\n'
-                    break
                 else:
-                   while not '$$$$' in next(iter_file).rstrip():
-                           pass
+                    while not '$$$$' in line:
+                        line = in_file.readline().rstrip()
+                    pass
+            in_file.seek(0)
+            not_find_beg, not_find_end = True, True
+
         o_file.write(output_string)
         output_string = ''
         o_file.close()
@@ -137,7 +143,7 @@ def parse_threshold_desirability(thresholds):
 
     for threshold in thresholds:
         if 'desirability' in threshold:
-            return threshold.split('#')[0].split('_')[1:], int(threshold.split('#')[1][0])
+            return threshold.split('#')[0].split('_')[1:], int(threshold.split('#')[1])
 
 
 # --------------------------Filtering--------------------------
@@ -265,12 +271,13 @@ def process_function(in_function):
 
 def get_norm_value(function, x_input):
     """
-    It returns scaled value between 0 - 1, according to desirability function
+    It returns scaled value        print(output_string)
+ between 0 - 1, according to desirability function
     :param function: desirability function, e.g. [['0.45', 0], ['0.55', 10*x - 4.5], ['1000', 1]]
     :param x_input: value
     :return: scaled value
     """
-    
+
     x = symbols("x")
     for index, bound in enumerate(function):
         if round(x_input, 5) <= float(bound[0]): return float(function[index][1].subs(x, x_input))
@@ -295,10 +302,6 @@ def desirability(input_sdf, working_ar, threshold_filtering, threshold_desire, n
     match_threshold_output['match'] = output
     save_output(input_sdf, 'output.sdf', match_threshold_output, parameters_to_predict)
 
-    # delete filtered compounds from working array
-    # for id in output[:, 1]:
-    #     working_ar = working_ar[working_ar[:, 1] != id]
-
     working_ar = np.hstack((working_ar, np.zeros((working_ar.shape[0], 1))))
     functions = process_function(threshold_desire)
 
@@ -312,8 +315,14 @@ def desirability(input_sdf, working_ar, threshold_filtering, threshold_desire, n
             row_average += get_norm_value(fnc, predictions)
         working_ar[index, -1] = row_average / number_of_parameters
 
-    tmp_arr = working_ar[working_ar[:, -1].argsort()][::-1][:number_of_compounds, :-1]
-    return tmp_arr[tmp_arr[:, 0].argsort()]
+    all_zeros = np.all(working_ar[:, 2] == 0, axis = 0)
+    if all_zeros:
+        tmp_arr = working_ar[working_ar[:, -2].argsort()][::-1][:number_of_compounds, :-1]
+        return tmp_arr[tmp_arr[:, 0].argsort()]
+    else:
+        tmp_arr = working_ar[working_ar[:, -1].argsort()][::-1][:number_of_compounds, :-1]
+        return tmp_arr[tmp_arr[:, 0].argsort()]
+
 
 def main_params(input_sdf, input_pred, parameters_to_predict, output_file, methods, thresholds, use_bounded_box):
 
@@ -333,7 +342,6 @@ def main_params(input_sdf, input_pred, parameters_to_predict, output_file, metho
     else: # desirability
         threshold_desire, number_of_compounds = parse_threshold_desirability(thresholds)
         output['process_predictions'] = desirability(input_sdf, working_array, threshold_match, threshold_desire, number_of_compounds, parameters_to_predict)
-
     # save outputs to coresponding files
     save_output(input_sdf, output_file, output, parameters_to_predict)
 

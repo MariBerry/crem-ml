@@ -14,7 +14,9 @@ def get_ranges():
     some external filed stored in coresponding model directory.
     :return: dictionary with parameter: e.g. {'LOGBB': 1, 'solubility': 13}
     """
-    return {'LOGBB': 1, 'solubility': 8}
+    # return {'sol': 13}
+    # return {'5HT1A': 10, 'BBB': 1, 'HIA': 1, 'HLM': 1}
+    return {'5HT1A': 10}
 
 def create_file_with_processed_data(file_norm_contrib, parameters):
     """
@@ -182,7 +184,7 @@ def normalize_contributions(file_norm_contrib, parameters, predicted_values, thr
 
 
 
-def pick_worst_ones(file_norm_frag, file_worst_frag, number_of_fragments, number_of_compounds):
+def pick_worst_ones(file_norm_frag, file_worst_frag, number_of_fragments, number_of_compounds, max_frag_size):
     """
     Find the worst fragments and save them into file
     :param file_worst_frag: name of file which you want to create with the worst fragments
@@ -190,17 +192,46 @@ def pick_worst_ones(file_norm_frag, file_worst_frag, number_of_fragments, number
     :param number_of_compounds: list of all compounds (just ids)
     :return: return array of the worst fragments and save it to the file
     """
+    print(file_norm_frag)
 
-    normalized_array = np.genfromtxt(
-        file_norm_frag,
-        skip_header=1,
-        usecols=(0, 1, 2, -2), # compound_id, fragment_id, fragment(name|context), average
-        dtype=['<i8', '<i8', '<U150', '<f16'],
-        names=['compound_id', 'fragment_id', 'fragment', 'average_contrib'],
-        delimiter='\t')
+    with open(file_norm_frag, 'r') as in_file_norm_frag:
+        in_file_norm_frag.readline()
 
+        read_frag = []
+
+        for line in in_file_norm_frag:
+            line = line.strip().split('\t')
+            compound_id = line[0]
+            fragment_id = line[1]
+            fragment = line[2]
+            average = line[-2]
+            read_frag.append([compound_id, fragment_id, fragment, average])
+
+    read_frag = np.array(read_frag)
+    comp = read_frag[:,0].astype(int)
+    frag_i = read_frag[:,1].astype(int)
+    average = read_frag[:,3].astype(float)
+    normalized_array = np.rec.fromarrays((comp, frag_i, read_frag[:,2], average), names=('compound_id', 'fragment_id', 'fragment', 'average_contrib'))
+    #
+    # normalized_array = np.genfromtxt(
+    #     file_norm_frag,
+    #     skip_header=1,
+    #     usecols=(0, 1, 2, -2), # compound_id, fragment_id, fragment(name|context), average
+    #     dtype=['<i8', '<i8', '<U150', '<f16'],
+    #     names=['compound_id', 'fragment_id', 'fragment', 'average_contrib'],
+    #     delimiter='\t')
+    #
+    # print(normalized_array)
     normalized_array.sort(order=['compound_id', 'average_contrib'])
+    mask = []
 
+    for item in normalized_array:
+        mol = item[2].split('|')[0]
+        num_heavy_atoms = Chem.MolFromSmiles(mol).GetNumHeavyAtoms()
+        mask.append(num_heavy_atoms < max_frag_size)
+
+    # print(normalized_array)
+    normalized_array = normalized_array[mask]
     worst_list = np.asarray(normalized_array[:number_of_fragments])
     number_of_compounds.remove(worst_list[0][0])
 
@@ -235,7 +266,7 @@ def pick_worst_ones(file_norm_frag, file_worst_frag, number_of_fragments, number
 
 
 def main_params(input_sdf, frag_norm_output_file, worst_output_file, parameters_to_predict, models, thresholds,
-                number_of_worst_fragments):
+                number_of_worst_fragments, max_frag_size):
     # prepare models to format [[svm, rf], [gbm]]
     for i, model in enumerate(models):
         models[i] = model.split('_')
@@ -253,7 +284,7 @@ def main_params(input_sdf, frag_norm_output_file, worst_output_file, parameters_
     normalize_contributions(frag_norm_output_file, parameters_to_predict, predicted_values, thresholds, get_ranges(), models)
 
     # create file with the worst fragments
-    worst_list = pick_worst_ones(frag_norm_output_file, worst_output_file, number_of_worst_fragments, number_of_compounds)
+    worst_list = pick_worst_ones(frag_norm_output_file, worst_output_file, number_of_worst_fragments, number_of_compounds, max_frag_size)
 
 
 def main():
@@ -273,6 +304,8 @@ def main():
                         help='thresholds to be match, written in the same order as properties')
     parser.add_argument('-n', '--n_worst', action='store', type=int,
                         help='specifies number of worst fragments')
+    parser.add_argument('-mf', '--max_frag_size', action='store', type=int,
+                        help='specifies max number of heavy atoms')
 
     args = vars(parser.parse_args())
     for o, v in args.items():
@@ -283,9 +316,10 @@ def main():
         if o == "models": models = v
         if o == "thresholds": thresholds = v
         if o == "n_worst": number_of_worst_fragments = v
+        if o == "max_frag_size": max_frag_size = v
 
     main_params(input_sdf, frag_norm_output_file, worst_output_file, parameters_to_predict, models, thresholds,
-                number_of_worst_fragments)
+                number_of_worst_fragments, max_frag_size)
 
 
 if __name__ == '__main__':

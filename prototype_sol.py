@@ -219,8 +219,9 @@ num_of_gen = 5
 pathname = os.path.dirname(sys.argv[0])
 script_dir = os.path.abspath(pathname)
 working_dir = os.getcwd()
+# working_dir = '/home/david/Documents/projects/dp/optimizer/sdf'
 chemaxon_path = "/home/david/opt/chemaxon/jchemsuite/bin"
-input_sdf_file = working_dir + "/stepronin.sdf"
+input_sdf_file = working_dir + "/sol_1597.sdf"
 home_dir = working_dir
 setup_file = script_dir + "/setup.txt"
 std_rules_file = script_dir + "/std_rules.xml"
@@ -271,10 +272,10 @@ for gen in range(num_of_gen):
     calculate_sirms_descriptors(std_lbl_sdf_file, setup_file, properties_sirms, output_format, ncores)
 
     # with more properties to predict
-    paramaters_to_predict = ['5HT1A', 'BBB', 'HIA', 'HLM']
-    models_dir = [script_dir + '/models/5HT1A/', script_dir + '/models/BBB/', script_dir + '/models/HIA/', script_dir + '/models/HLM/']
-    models = [['rf', 'svm', 'gbm'], ['rf', 'gbm', 'svm'], ['rf', 'gbm', 'svm'], ['rf', 'gbm', 'svm']]
-    models_type = ['reg', 'class', 'class', 'class',]
+    paramaters_to_predict = ['sol']
+    models_dir = [script_dir + '/models/sol/']
+    models = [['rf', 'svm', 'gbm']]
+    models_type = ['reg']
 
     # predict properties of std_lbl_sdf file
     predict_properties(paramaters_to_predict, x_fname, output_format, models, models_dir, models_type)
@@ -282,8 +283,8 @@ for gen in range(num_of_gen):
     # process predictions
     # methods = ['filtering', 'pareto', 'desirability']
     methods = ['desirability']
-    thresholds =['more7', 'more0.5', 'more0.5', 'less0.5',
-                 'desirability_7:0,9:(x-7)/2,100:1_0.5:0,0.8:(1/0.3)*x-(5/3),100:1,0.5:0,0.8:(1/0.3)*x-(5/3),100:1,0.2:1,0.5:-(1/0.3)*x+(5/3),100:0#5']
+    thresholds =['more3',
+                 'desirability_2.5:0,3.5:x-2.5,10:1#3']
     # thresholds =['more0.5', 'more-2']
     # for testing bounded_box = False
     bounded_box = True
@@ -293,7 +294,7 @@ for gen in range(num_of_gen):
     output_sdf_file = os.path.dirname(input_sdf_file) + '/output_process_predictions.sdf'
 
     # calculate fragment ids
-    smarts_string = "[#6+0;!$(*=,#[!#6])]!@!=!#[*]"
+    smarts_string = "[#6+0;!$(*=,#[!#6])]!@!=!#[!#1]"
     max_cuts = 3
     find_frags_verbose = False
     error_fname = os.path.dirname(input_sdf_file) + '/fragments_log.log'
@@ -310,7 +311,7 @@ for gen in range(num_of_gen):
                       output_format)
 
     # find worst fragments
-    models_contrib = ['rf_svm_gbm', 'rf_gbm_svm', 'rf_gbm_svm', 'rf_gbm_svm']  # different format of models, because of calling from terminal
+    models_contrib = ['rf_svm_gbm']  # different format of models, because of calling from terminal
     number_of_worst_fragments = 3
     max_frag_size = 7
     process_contributions(output_sdf_file, 'fragment_contrib_norm.txt', 'worst_fragments.txt', paramaters_to_predict,

@@ -11,7 +11,7 @@ def main_params(in_function, in_range):
 
     fnc = process_function(in_function)
     print(fnc)
-    in_values = np.arange(int(in_range[0]), int(in_range[1]), 0.1)
+    in_values = np.arange(int(in_range[0]), int(in_range[1]), 0.01)
     out_values = in_values.copy()
 
     for index, value in enumerate(out_values):

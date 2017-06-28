@@ -27,7 +27,7 @@ def simple_cull(inputPoints, dominates):
                 rowNr += 1
 
         if nonDominated:
-            paretoPoints.append(index+1)
+            paretoPoints.append(index)
         index += 1
 
     return paretoPoints
@@ -35,4 +35,3 @@ def simple_cull(inputPoints, dominates):
 
 def dominates_min(row, anotherRow):
     return sum([row[x] <= anotherRow[x] for x in range(len(row))]) == len(row)  # minimization domination
-
