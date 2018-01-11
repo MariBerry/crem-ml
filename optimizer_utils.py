@@ -1,7 +1,43 @@
 import os
 
 from subprocess import call
+import sqlite3 as lite
 
+from typing import List
+
+
+def create_database(working_dir: str, parameter_to_optimize: List) -> str:
+    """
+    Define new database and save it to working_dir.
+
+    :param working_dir: path to working directory, new db will be stored there
+    :param parameter_to_optimize: list of all parameters
+    :return: path_to_database
+    """
+    parameter_to_optimize = ["_{}".format(parameter) for parameter in parameter_to_optimize]
+    path_to_database = os.path.join(working_dir, 'output.db')
+
+    table_str = "CREATE TABLE optimizer_table"\
+                    "(id TEXT NOT NULL,"\
+                    "smi TEXT NOT NULL,"\
+                    "generation INTEGER NOT NULL,"\
+                    "parent TEXT,"\
+                    "transformation TEXT,"\
+                    "fit INTEGER,"
+    table_str += " REAL,".join(parameter_to_optimize) + " REAL)"
+
+    if os.path.isfile(path_to_database):
+        os.remove(path_to_database)
+
+    con = lite.connect(path_to_database)
+    with con:
+        cursor = con.cursor()
+        cursor.execute(table_str)
+        cursor.execute("CREATE INDEX idx ON optimizer_table (id)")
+        cursor.execute("CREATE INDEX smi_idx ON optimizer_table (smi)")
+        cursor.execute("DELETE FROM optimizer_table")
+
+    return path_to_database
 
 def quote_str(s: str) -> str:
     """
