@@ -19,7 +19,12 @@ def optimize(settings: Dict) -> None:
     :param settings: dictionary with input settings
     """
 
+    settings['database'] = optimizer_utils.create_database(
+        settings['working_dir'], settings['parameter_to_optimize'])
+
     settings['working_dir'] = os.path.join(settings['working_dir'], 'out')
+    if os.path.exists(settings['working_dir']):
+        shutil.rmtree(settings['working_dir'])
 
     for gen in range(settings['num_of_generation']):
 
