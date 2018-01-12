@@ -76,6 +76,9 @@ max_cuts
 radius
 3
 
+path_to_replacement_database
+/home/david/Documents/projects/dp/optimizer/replacement_chembl_cuts4_H.db
+
 number_of_worst_fragments
 3
 
@@ -95,4 +98,3 @@ desirability 7:0,9:(x-7)/2,100:1_0.5:0,0.8:(1/0.3)*x-(5/3),100:1_0.5:0,0.8:(1/0.
 
 store_all_files
 True
-
