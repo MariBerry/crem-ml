@@ -3,6 +3,7 @@
 import argparse
 import os
 import shutil
+import sys
 
 from typing import Dict
 
@@ -18,10 +19,14 @@ def optimize(settings: Dict) -> None:
 
     :param settings: dictionary with input settings
     """
+    # for new IDs
+    num_of_compounds = 0
 
-    settings['database'] = optimizer_utils.create_database(
+    # create database
+    settings['output_database'] = optimizer_utils.create_database(
         settings['working_dir'], settings['parameter_to_optimize'])
 
+    # create output folder
     settings['working_dir'] = os.path.join(settings['working_dir'], 'out')
     if os.path.exists(settings['working_dir']):
         shutil.rmtree(settings['working_dir'])
@@ -34,23 +39,27 @@ def optimize(settings: Dict) -> None:
            shutil.rmtree(generation_dir)
         os.makedirs(generation_dir)
 
-        # copy input sdf file into generation dir
-        shutil.copy2(settings['path_to_seed_structure'], os.path.join(generation_dir, 'input_dataset.sdf'))
-        settings['path_to_seed_structure'] = os.path.join(generation_dir, 'input_dataset.sdf')
-
-        # change dir to generation dir
-        os.chdir(generation_dir)
+        # add new unique compounds into database
+        tmp_num_comp = num_of_compounds
+        num_of_compounds = optimizer_utils.add_mols_into_db(num_of_compounds,
+                                         settings['path_to_seed_structure'],
+                                         settings['output_database'],
+                                         gen)
+        # check if we have new compounds in new generation
+        if tmp_num_comp == num_of_compounds:
+            print("\nIn generation {} aren't new compounds".format(gen))
+            sys.exit()
 
         # start generation
         start = datetime.datetime.now()
         print(50 * '_', '\nGeneration {}: {}'.format(gen, start))
 
-        #standardization
-        settings['path_to_seed_structure'] = optimizer_utils.standardize_sdf(
-            input_sdf_file=settings['path_to_seed_structure'],
-            std_rules_path=settings['path_to_std_rules_file'],
-            chemaxon_path=settings['path_to_chemaxon_bin']
-        )
+        # #standardization
+        # settings['path_to_seed_structure'] = optimizer_utils.standardize_sdf(
+        #     input_sdf_file=settings['path_to_seed_structure'],
+        #     std_rules_path=settings['path_to_std_rules_file'],
+        #     chemaxon_path=settings['path_to_chemaxon_bin']
+        # )
 
 
 
