@@ -33,7 +33,8 @@ CONFIG_STRUCTURE = {'script_dir': 'fill',
                     'max_frag_size': 'fill',
                     'output_format': 'svm',
                     'num_of_generation': 'fill',
-                    'optimization_methods': 'fill'      # ['desirability', 'pareto']
+                    'optimization_methods': 'fill',     # ['desirability', 'pareto']
+                    'store_all_files': 'fill'           # If false, it deletes all temp files, only db will be stored
                     }
 
 def create_config(output_dir: str, file_name: str='config') -> None:
@@ -121,6 +122,7 @@ def test_config(config: Dict) -> Dict:
     assert len(n_model) == 1, "You have to have same number of parameters for model"
 
     config['bounded_box'] = True if config['bounded_box'][0] == 'True' or config['bounded_box'][0] == 'true' else False
+    config['store_all_files'] = True if config['store_all_files'][0] == 'True' or config['store_all_files'][0] == 'true' else False
     config['smart_string'] = config['smart_string'][0]
     config['output_format'] = config['output_format'][0]
     config['properties_calc_contrib'] = config['properties_calc_contrib'][0]
