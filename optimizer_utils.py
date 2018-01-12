@@ -2,6 +2,7 @@ import os
 
 from subprocess import call
 import sqlite3 as lite
+from rdkit import Chem
 
 from typing import List
 
@@ -14,7 +15,7 @@ def create_database(working_dir: str, parameter_to_optimize: List) -> str:
     :param parameter_to_optimize: list of all parameters
     :return: path_to_database
     """
-    parameter_to_optimize = ["_{}".format(parameter) for parameter in parameter_to_optimize]
+    parameter_to_optimize = ["predicted_{}".format(parameter) for parameter in parameter_to_optimize]
     path_to_database = os.path.join(working_dir, 'output.db')
 
     table_str = "CREATE TABLE optimizer_table"\
@@ -24,7 +25,7 @@ def create_database(working_dir: str, parameter_to_optimize: List) -> str:
                     "parent TEXT,"\
                     "transformation TEXT,"\
                     "fit INTEGER,"
-    table_str += " REAL,".join(parameter_to_optimize) + " REAL)"
+    table_str += " REAL,".join(parameter_to_optimize) + " REAL, prediction REAL)"
 
     if os.path.isfile(path_to_database):
         os.remove(path_to_database)
@@ -38,6 +39,52 @@ def create_database(working_dir: str, parameter_to_optimize: List) -> str:
         cursor.execute("DELETE FROM optimizer_table")
 
     return path_to_database
+
+def add_mols_into_db(num_of_compounds: int, input_sdf: str, database: str, gen: int) -> int:
+    """
+    Read input sdf file, convert all mols into smiles, check if they are in DB,
+    and if not add them with all possible options, such as transformation rules,
+    parents, number of generation and so on.
+
+    :param num_of_compounds: actual number of compounds in output database
+    :param input_sdf: path to input sdf file
+    :param database: path to output database
+    :param gen: actual generation of optimization
+    :return: number of compounds in database
+    """
+    # get generator of mols in sdf file
+    supplier = Chem.SDMolSupplier(input_sdf)
+
+    con = lite.connect(database)
+    with con:
+        cursor = con.cursor()
+
+        cursor.execute("SELECT smi FROM optimizer_table")
+        mols_in_db = [mol[0] for mol in cursor.fetchall()]
+
+        insert = []
+
+        for mol in supplier:
+            smile = Chem.MolToSmiles(mol)
+
+            # mol doesn't have parent and transformation prop if it is in zero gen
+            if gen == 0:
+                mol.SetProp("parent", "None")
+                mol.SetProp("transformation", "None")
+
+            if smile not in mols_in_db:
+                insert.append(("ID" + str(num_of_compounds),
+                               smile,
+                               gen,
+                               mol.GetProp('parent'),
+                               mol.GetProp('transformation')))
+                mols_in_db.append(smile)
+                num_of_compounds += 1
+
+        cursor.executemany("INSERT INTO optimizer_table (id, smi, generation, parent, transformation) VALUES (?, ?, ?, ?, ?)", insert)
+        con.commit()
+
+    return num_of_compounds
 
 def quote_str(s: str) -> str:
     """
