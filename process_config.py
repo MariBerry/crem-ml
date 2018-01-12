@@ -29,6 +29,7 @@ CONFIG_STRUCTURE = {'script_dir': 'fill',
                     'smart_string': '[#6+0;!$(*=,#[!#6])]!@!=!#[*]',
                     'max_cuts': 'fill',
                     'radius': 'fill',
+                    'path_to_replacement_database': 'fill',
                     'number_of_worst_fragments': 'fill',
                     'max_frag_size': 'fill',
                     'output_format': 'svm',
@@ -78,7 +79,8 @@ def test_config(config: Dict) -> Dict:
         # check files
         elif (key == 'path_to_setup_file') \
             or (key == 'path_to_seed_structure') \
-            or (key == 'path_to_std_rules_file'):
+            or (key == 'path_to_std_rules_file') \
+            or (key == 'path_to_replacement_database'):
                 assert isfile(config[key][0]), "{} doesn't exists".format(key)
                 config[key] = value[0]
         # check if models dir exists
