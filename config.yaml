@@ -1,7 +1,4 @@
-script_dir: /home/david/Documents/projects/dp/optimizer
 working_dir: /home/david/Documents/projects/test_dp
-spci_dir: /home/david/Documents/projects/dp/optimizer/spci
-sirms_dir: /home/david/Documents/projects/dp/optimizer/spci/sirms
 num_parameters: 4
 setup_file: /home/david/Documents/projects/dp/optimizer/setup.txt
 std_rules: /home/david/Documents/projects/dp/optimizer/std_rules.xml
@@ -19,7 +16,7 @@ replacement_database: /home/david/Documents/projects/dp/optimizer/replacement_ch
 number_of_worst_fragments: 3
 max_frag_size: 7
 output_format: svm
-num_of_generation: 3
+num_of_generation: 1
 optimization_methods: pareto desirability
 store_all_files: True
 param_0:

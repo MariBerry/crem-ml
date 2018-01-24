@@ -52,15 +52,27 @@ def optimize(settings: Dict) -> None:
             print("\nIn generation {} aren't new compounds".format(gen))
             sys.exit()
 
+        # copy input_sdf_file into gen directory
+        new_sdf = os.path.join(generation_dir, 'input_dataset.sdf')
+        shutil.copyfile(settings['seed_structure'], new_sdf)
+        settings['seed_structure'] = new_sdf
+
         # start generation
         start = datetime.datetime.now()
         print(50 * '_', '\nGeneration {}: {}'.format(gen, start))
 
-        #standardization
+        # standardization
         settings['seed_structure'] = optimizer_utils.standardize_sdf(
             input_sdf_file=settings['seed_structure'],
             std_rules_path=settings['std_rules'],
             chemaxon_path=settings['chemaxon']
+        )
+
+        # calc atomic properties
+        settings['seed_structure'] = optimizer_utils.calculate_atomic_prop(
+            input_sdf_file=settings['seed_structure'],
+            chemaxon_path=settings['chemaxon'],
+            properties=settings['properties_chemaxon']
         )
 
 def main():

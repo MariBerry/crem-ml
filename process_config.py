@@ -10,10 +10,7 @@ from typing import TextIO
 from typing import List
 
 
-CONFIG_STRUCTURE = [['script_dir', 'path_to_folder_of_optimizer'],
-                    ['working_dir', 'path_to_output_dir'],
-                    ['spci_dir', 'path_to_folder_with_spci'],
-                    ['sirms_dir', 'path_to_folder_with_sirms'],
+CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['num_parameters', 'number_of_parameters_to optimize'],
                     ['setup_file', 'path_to_setup_file'],
                     ['std_rules', 'path_to_file_with_std_rules'],
@@ -57,19 +54,11 @@ def create_config(output_dir: str, num_of_parametrs: int, file_name: str='config
     assert exists(output_dir), "Output directory doesn't exist"
 
     # set indexes
-    script_dir_index = 0
-    working_dir_index = 1
-    spci_dir_index = 2
-    sirms_dir_index = 3
-    num_parameters_index = 4
+    working_dir_index = 0
+    num_parameters_index = 1
 
-    CONFIG_STRUCTURE[script_dir_index][1] = os.path.abspath(os.path.dirname(sys.argv[0]))
     # working dir
     CONFIG_STRUCTURE[working_dir_index][1] = os.path.abspath(output_dir)
-    # spci dir
-    CONFIG_STRUCTURE[spci_dir_index][1] = os.path.join(CONFIG_STRUCTURE[script_dir_index][1], 'spci')
-    # sirms dir
-    CONFIG_STRUCTURE[sirms_dir_index][1] = os.path.join(CONFIG_STRUCTURE[spci_dir_index][1], 'sirms')
     # num param
     CONFIG_STRUCTURE[num_parameters_index][1] = num_of_parametrs
 
@@ -104,9 +93,7 @@ def test_config(input_config: str) -> Dict:
     # check non parameters settings
     for key, value in config.items():
         # check directories
-        if (key == 'script_dir') or (key == 'working_dir') \
-            or (key == 'spci_dir') or (key == 'sirms_dir') \
-            or (key == 'chemaxon'):
+        if (key == 'working_dir') or (key == 'chemaxon'):
             assert exists(config[key]), "{} doesn't exists".format(key)
             config[key] = value
         # check files
