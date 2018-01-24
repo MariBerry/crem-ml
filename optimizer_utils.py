@@ -25,7 +25,7 @@ def create_database(working_dir: str, parameter_to_optimize: List) -> str:
                     "parent TEXT,"\
                     "transformation TEXT,"\
                     "fit INTEGER,"
-    table_str += " REAL,".join(parameter_to_optimize) + " REAL, prediction REAL)"
+    table_str += " REAL,".join(parameter_to_optimize) + " REAL, overall_prediction REAL)"
 
     if os.path.isfile(path_to_database):
         os.remove(path_to_database)
