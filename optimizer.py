@@ -72,16 +72,18 @@ def main():
                         help='path to config with input settings')
     parser.add_argument('-o', '--output_location', required=True,
                         help='path to output location, place where all outputs are saved')
+    parser.add_argument('-n', '--n_params', action='store', type=int,
+                        help='specifies number of parameters to optimize')
     parser.add_argument('-d', '--define_config_structure', action='store_true', default=False,
                         help='define config structure and save it to output location')
     args = vars(parser.parse_args())
 
     if args['define_config_structure']:
-        process_config.create_config(args['output_location'])
+        assert args['n_params'], "You have to specify number of parameters with -n or --n_params option"
+        process_config.create_config(args['output_location'], args['n_params'])
     else:
-        settings = process_config.check_config(args['input_config'])
-        optimize(settings)
-
+        settings = process_config.test_config(args['input_config'])
+        # optimize(settings)
 
 if __name__ == '__main__':
     main()
