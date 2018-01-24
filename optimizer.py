@@ -22,9 +22,11 @@ def optimize(settings: Dict) -> None:
     # for new IDs
     num_of_compounds = 0
 
+    parameters = [parameter['name'] for parameter in settings if "param_" in settings]
+
     # create database
     settings['output_database'] = optimizer_utils.create_database(
-        settings['working_dir'], settings['parameter_to_optimize'])
+        settings['working_dir'], parameters)
 
     # create output folder
     settings['working_dir'] = os.path.join(settings['working_dir'], 'out')
@@ -42,7 +44,7 @@ def optimize(settings: Dict) -> None:
         # add new unique compounds into database
         tmp_num_comp = num_of_compounds
         num_of_compounds = optimizer_utils.add_mols_into_db(num_of_compounds,
-                                         settings['path_to_seed_structure'],
+                                         settings['seed_structure'],
                                          settings['output_database'],
                                          gen)
         # check if we have new compounds in new generation
@@ -54,17 +56,12 @@ def optimize(settings: Dict) -> None:
         start = datetime.datetime.now()
         print(50 * '_', '\nGeneration {}: {}'.format(gen, start))
 
-        # #standardization
-        # settings['path_to_seed_structure'] = optimizer_utils.standardize_sdf(
-        #     input_sdf_file=settings['path_to_seed_structure'],
-        #     std_rules_path=settings['path_to_std_rules_file'],
-        #     chemaxon_path=settings['path_to_chemaxon_bin']
-        # )
-
-
-
-
-
+        #standardization
+        settings['seed_structure'] = optimizer_utils.standardize_sdf(
+            input_sdf_file=settings['seed_structure'],
+            std_rules_path=settings['std_rules'],
+            chemaxon_path=settings['chemaxon']
+        )
 
 def main():
     parser = argparse.ArgumentParser(description='System for designing new drugs')
@@ -83,7 +80,7 @@ def main():
         process_config.create_config(args['output_location'], args['n_params'])
     else:
         settings = process_config.test_config(args['input_config'])
-        # optimize(settings)
+        optimize(settings)
 
 if __name__ == '__main__':
     main()
