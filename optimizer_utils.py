@@ -11,6 +11,7 @@ from typing import List
 sys.path.insert(1, os.path.join(sys.path[0], 'spci'))
 import calc_atomic_properties_chemaxon
 import filter_descriptors
+import predict
 
 sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
 import sirms
@@ -118,7 +119,7 @@ def quote_str(s: str) -> str:
     return "'%s'" % s
 
 def standardize_sdf(input_sdf_file: str, std_rules_path: str,
-                    chemaxon_path: str, copy_rules: bool=True) -> str:
+                    chemaxon_path: str, copy_rules: bool=False) -> str:
     """
     Create file with standardized compounds
 
@@ -226,3 +227,28 @@ def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
     filter_descriptors.main_params(in_fname=x_fname,
                                    out_fname=x_fname,
                                    file_format=output_format)
+
+def predict_properties(parameters: List, fragments_fname: str, output_format: str):
+    """
+    Creates summarized file with predictions
+
+    :parama parameters: list of dicts with parameters
+    :parama fragmens_fname: path to file with calculated descriptors
+    :parama output_format: svm/txt/...
+    """
+
+    for parameter in parameters:
+        print("Prediction for {} started".format(parameter['name']))
+        predict.main_params(x_fname=fragments_fname,
+                            input_format=output_format,
+                            out_fname='predictions_' + parameter['name'] + '.txt',
+                            model_names=parameter['types_of_alg'],
+                            model_dir=parameter['path'],
+                            model_type=parameter['type_of_model'],
+                            ad=['bound_box'],
+                            verbose=False,
+                            title=parameter['name'])
+        f = open(os.path.join(os.path.dirname(fragments_fname), 'predictions.txt'), 'a')
+        f.write(open('predictions_' + parameter['name'] + '.txt', 'r').read())
+        f.close()
+        os.remove('predictions_' + parameter['name'] + '.txt')

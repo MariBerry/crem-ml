@@ -82,6 +82,14 @@ def optimize(settings: Dict) -> None:
                                     settings['output_format'],
                                     settings['n_cores']
                                     )
+        fragments_fname = os.path.join(generation_dir, 'x.txt')
+
+        # predict properties of std_lbl_sdf file
+        parameters_list_dicts = [settings[parameter] for parameter in settings if "param_" in parameter]
+        optimizer_utils.predict_properties(parameters_list_dicts,
+                                           fragments_fname,
+                                           settings['output_format']
+                                           )
 
 def main():
     parser = argparse.ArgumentParser(description='System for designing new drugs')

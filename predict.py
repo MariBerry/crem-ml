@@ -107,7 +107,7 @@ def check_bound_box(x, bound_box_constrains):
     #               axis=1).tolist()
 
 
-def main_params(x_fname, input_format, out_fname, model_names, model_dir, model_type, ad, verbose):
+def main_params(x_fname, input_format, out_fname, model_names, model_dir, model_type, ad, verbose, title='model'):
 
     if ad is not None:
         ad_dict = {item: [] for item in ad}
@@ -154,7 +154,6 @@ def main_params(x_fname, input_format, out_fname, model_names, model_dir, model_
     pred_model_names = list(sorted(pred.keys()))
 
     #split model_dir, e.g. 'models/logBB/' and return logBB, the name is used in file with predictions
-    title = model_dir.split('/')[-2]
 
     pred = np.array([pred[k] for k in pred_model_names]).transpose()
 
