@@ -55,6 +55,10 @@ def add_mols_into_db(num_of_compounds: int, input_sdf: str, database: str, gen: 
     # get generator of mols in sdf file
     supplier = Chem.SDMolSupplier(input_sdf)
 
+    if gen == 0:
+        new_sdf_path = os.path.join(os.path.dirname(input_sdf), 'tmp.sdf')
+        new_sdf = Chem.SDWriter(new_sdf_path)
+
     con = lite.connect(database)
     with con:
         cursor = con.cursor()
@@ -69,8 +73,10 @@ def add_mols_into_db(num_of_compounds: int, input_sdf: str, database: str, gen: 
 
             # mol doesn't have parent and transformation prop if it is in zero gen
             if gen == 0:
+                mol.SetProp("ID", "ID{}".format(str(num_of_compounds)))
                 mol.SetProp("parent", "None")
                 mol.SetProp("transformation", "None")
+                new_sdf.write(mol)
 
             if smile not in mols_in_db:
                 insert.append(("ID" + str(num_of_compounds),
@@ -83,6 +89,11 @@ def add_mols_into_db(num_of_compounds: int, input_sdf: str, database: str, gen: 
 
         cursor.executemany("INSERT INTO optimizer_table (id, smi, generation, parent, transformation) VALUES (?, ?, ?, ?, ?)", insert)
         con.commit()
+
+        if gen == 0:
+            new_sdf.close()
+            os.remove(input_sdf)
+            os.rename(new_sdf_path, input_sdf)
 
     return num_of_compounds
 
