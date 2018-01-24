@@ -1,10 +1,14 @@
 import os
+import sys
 
 from subprocess import call
 import sqlite3 as lite
 from rdkit import Chem
 
 from typing import List
+
+sys.path.insert(1, os.path.join(sys.path[0], 'spci'))
+import calc_atomic_properties_chemaxon
 
 
 def create_database(working_dir: str, parameter_to_optimize: List) -> str:
@@ -115,6 +119,7 @@ def standardize_sdf(input_sdf_file: str, std_rules_path: str, chemaxon_path: str
     :param std_rules_path: path to file with rules for standardization
     :param chemaxon_path: path to chemaxon bin
     :param copy_rules: if specified, copy rules to output directory
+    :return: path to new sdf file
     """
 
     print('Standardization is in progress...')
@@ -138,3 +143,21 @@ def standardize_sdf(input_sdf_file: str, std_rules_path: str, chemaxon_path: str
 
     print('Standardization finished!')
     return std_sdf
+
+def calculate_atomic_prop(input_sdf_file: str, chemaxon_path: str, properties: List) -> str:
+    """
+    Calculate atomic properties with Chemaxon, it creates file with labeled compounds
+
+    :param input_sdf_file: path to sdf file with compounds
+    :param chemaxon_path: path to chemaxon bin
+    :param properties: list of properties, e.g. ['charge', 'refractivity', 'logp', ...]
+    :return: path to new sdf file
+    """
+    print('Atomic properties calculation is in progress...')
+    lbl_sdf = os.path.join(os.path.dirname(input_sdf_file), 'input_dataset_std_lbl.sdf')
+    calc_atomic_properties_chemaxon.main_params(input_sdf_file,
+                                                lbl_sdf,
+                                                properties,
+                                                None,
+                                                os.path.join(chemaxon_path, 'cxcalc'))
+    print('Atomic properties calculation finished')
