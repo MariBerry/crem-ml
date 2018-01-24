@@ -1,5 +1,6 @@
 import os
 import sys
+import shutil
 
 from subprocess import call
 import sqlite3 as lite
@@ -9,6 +10,10 @@ from typing import List
 
 sys.path.insert(1, os.path.join(sys.path[0], 'spci'))
 import calc_atomic_properties_chemaxon
+import filter_descriptors
+
+sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
+import sirms
 
 
 def create_database(working_dir: str, parameter_to_optimize: List) -> str:
@@ -77,6 +82,7 @@ def add_mols_into_db(num_of_compounds: int, input_sdf: str, database: str, gen: 
 
             # mol doesn't have parent and transformation prop if it is in zero gen
             if gen == 0:
+                mol.SetProp("_Name", "ID{}".format(str(num_of_compounds)))
                 mol.SetProp("ID", "ID{}".format(str(num_of_compounds)))
                 mol.SetProp("parent", "None")
                 mol.SetProp("transformation", "None")
@@ -111,7 +117,8 @@ def quote_str(s: str) -> str:
 
     return "'%s'" % s
 
-def standardize_sdf(input_sdf_file: str, std_rules_path: str, chemaxon_path: str, copy_rules: bool=False) -> str:
+def standardize_sdf(input_sdf_file: str, std_rules_path: str,
+                    chemaxon_path: str, copy_rules: bool=True) -> str:
     """
     Create file with standardized compounds
 
@@ -141,7 +148,6 @@ def standardize_sdf(input_sdf_file: str, std_rules_path: str, chemaxon_path: str
                   quote_str(std_sdf)]  # name of output file
     call(' '.join(run_params), shell=True)
 
-    print('Standardization finished!')
     return std_sdf
 
 def calculate_atomic_prop(input_sdf_file: str, chemaxon_path: str, properties: List) -> str:
@@ -160,4 +166,63 @@ def calculate_atomic_prop(input_sdf_file: str, chemaxon_path: str, properties: L
                                                 properties,
                                                 None,
                                                 os.path.join(chemaxon_path, 'cxcalc'))
-    print('Atomic properties calculation finished')
+    return lbl_sdf
+
+def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
+                                properties: List, output_format: str,
+                                n_cores: int, copy_setup: bool=True,
+                                fragments_fname=None):
+    """
+    Create files with descriptors
+
+    :param input_sdf_file: path to standardized and labeled sdf file
+    :param setup_file: path to file with setup for calculation of sirms descriptors
+    :param properties: list of properties, e.g. ['CHARGE', 'REFRACTIVITY', 'LOGP', ...]
+    :param output_format: svm
+    :param n_cores: number of cores for computing
+    :param copy_setup: if specified, copy setup file to output directory
+    :param fragments_fname: if specified, use fragments ids
+    """
+
+    print("Descriptors calculation started. Please wait it can take some time")
+
+    # copy setup file for sirms into generation dir
+    if copy_setup:
+        shutil.copyfile(setup_file,
+                        os.path.join(os.path.dirname(input_sdf_file), os.path.basename(setup_file))
+                        )
+
+    # define output files
+    if fragments_fname is not None:
+        x_fname = os.path.join(os.path.dirname(input_sdf_file), 'new_x.txt')
+    else:
+        x_fname = os.path.join(os.path.dirname(input_sdf_file), 'x.txt')
+
+    sirms.main_params(in_fname=input_sdf_file,    # input
+                      out_fname=x_fname,        # output
+                      opt_diff=properties,
+                      min_num_atoms=2,
+                      max_num_atoms=4,
+                      min_num_components=1,
+                      max_num_components=2,
+                      min_num_mix_components=2,
+                      max_num_mix_components=2,
+                      mix_fname=None,
+                      descriptors_transformation='num',
+                      mix_type='abs',
+                      opt_mix_ordered=False,
+                      opt_verbose=False,
+                      opt_noH=True,
+                      frag_fname=fragments_fname,
+                      per_atom_fragments=False,
+                      self_association_mix=False,
+                      reaction_diff=False,
+                      quasimix=False,
+                      id_field_name=None,
+                      output_format=output_format,
+                      ncores=n_cores)
+
+    # filter sirms descriptors
+    filter_descriptors.main_params(in_fname=x_fname,
+                                   out_fname=x_fname,
+                                   file_format=output_format)

@@ -17,6 +17,7 @@ number_of_worst_fragments: 3
 max_frag_size: 7
 output_format: svm
 num_of_generation: 1
+n_cores: 8
 optimization_methods: pareto desirability
 store_all_files: True
 param_0:

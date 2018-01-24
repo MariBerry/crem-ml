@@ -29,6 +29,7 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['max_frag_size', 'fill'],
                     ['output_format', 'svm'],
                     ['num_of_generation', 'fill'],
+                    ['n_cores', 'fill'],
                     ['optimization_methods', 'fill'],     # 'pareto desirability'
                     ['store_all_files', 'True or False']          # If false, it deletes all temp files, only db will be stored
                     ]
@@ -116,7 +117,7 @@ def test_config(input_config: str) -> Dict:
         elif (key == 'number_of_selected_compounds') or (key == 'max_cuts') \
             or (key == 'radius') or (key == 'number_of_worst_fragments') \
             or (key == 'max_frag_size') or (key == 'num_of_generation') \
-            or (key == 'num_parameters'):
+            or (key == 'num_parameters') or (key == 'n_cores'):
                 try:
                     num = int(value)
                 except:

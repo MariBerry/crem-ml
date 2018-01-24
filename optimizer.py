@@ -75,6 +75,14 @@ def optimize(settings: Dict) -> None:
             properties=settings['properties_chemaxon']
         )
 
+        # calculation of sirms descriptors
+        optimizer_utils.calculate_sirms_descriptors(settings['seed_structure'],
+                                    settings['setup_file'],
+                                    settings['properties_sirms'],
+                                    settings['output_format'],
+                                    settings['n_cores']
+                                    )
+
 def main():
     parser = argparse.ArgumentParser(description='System for designing new drugs')
     parser.add_argument('-i', '--input_config',
