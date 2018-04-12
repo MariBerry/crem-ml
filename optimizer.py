@@ -11,6 +11,7 @@ import datetime
 
 import process_config
 import optimizer_utils
+import process_predictions_new
 
 
 def optimize(settings: Dict) -> None:
@@ -22,11 +23,11 @@ def optimize(settings: Dict) -> None:
     # for new IDs
     num_of_compounds = 0
 
-    parameters = [parameter['name'] for parameter in settings if "param_" in settings]
+    parameters_list_dicts = [settings[parameter] for parameter in settings if "param_" in parameter]
 
     # create database
     settings['output_database'] = optimizer_utils.create_database(
-        settings['working_dir'], parameters)
+        settings['working_dir'], [parameter['name'] for parameter in parameters_list_dicts])
 
     # create output folder
     settings['working_dir'] = os.path.join(settings['working_dir'], 'out')
@@ -85,11 +86,28 @@ def optimize(settings: Dict) -> None:
         fragments_fname = os.path.join(generation_dir, 'x.txt')
 
         # predict properties of std_lbl_sdf file
-        parameters_list_dicts = [settings[parameter] for parameter in settings if "param_" in parameter]
         optimizer_utils.predict_properties(parameters_list_dicts,
                                            fragments_fname,
                                            settings['output_format']
                                            )
+
+        # process predictions
+        list_of_prediction_files = []   # prepare list of file paths with predictions
+        for parameter in parameters_list_dicts:
+            list_of_prediction_files.append(
+                os.path.join(generation_dir, 'prediction_{}.txt'.format(parameter['name'])))
+
+        process_predictions_new.main(settings['seed_structure'],
+                                     list_of_prediction_files,
+                                     os.path.join(generation_dir, 'processed_predictions.txt'),
+                                     [parameter['name'] for parameter in parameters_list_dicts],
+                                     settings['optimization_methods'],
+                                     [parameter['desirability'] for parameter in parameters_list_dicts],
+                                     [parameter['threshold'] for parameter in parameters_list_dicts],
+                                     settings['bounded_box']
+                                     )
+
+
 
 def main():
     parser = argparse.ArgumentParser(description='System for designing new drugs')
