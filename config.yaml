@@ -3,7 +3,7 @@ num_parameters: 4
 setup_file: /home/david/Documents/projects/dp/optimizer/setup.txt
 std_rules: /home/david/Documents/projects/dp/optimizer/std_rules.xml
 chemaxon: /home/david/opt/chemaxon/jchemsuite/bin
-seed_structure: /home/david/Documents/projects/test_dp/phenylpiperizine.sdf
+seed_structure: /home/david/Documents/projects/test_dp/seed_structures.sdf
 number_of_selected_compounds: 5
 bounded_box: True
 properties_chemaxon: charge logp acc don refractivity
