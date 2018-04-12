@@ -95,7 +95,7 @@ def optimize(settings: Dict) -> None:
         list_of_prediction_files = []   # prepare list of file paths with predictions
         for parameter in parameters_list_dicts:
             list_of_prediction_files.append(
-                os.path.join(generation_dir, 'prediction_{}.txt'.format(parameter['name'])))
+                os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
 
         process_predictions_new.main(settings['seed_structure'],
                                      list_of_prediction_files,
