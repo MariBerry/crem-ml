@@ -239,16 +239,14 @@ def predict_properties(parameters: List, fragments_fname: str, output_format: st
 
     for parameter in parameters:
         print("Prediction for {} started".format(parameter['name']))
+        output_file_name = os.path.join(os.path.dirname(fragments_fname),
+                                        'predictions_{}.txt'.format(parameter['name']))
         predict.main_params(x_fname=fragments_fname,
                             input_format=output_format,
-                            out_fname='predictions_' + parameter['name'] + '.txt',
+                            out_fname=output_file_name,
                             model_names=parameter['types_of_alg'],
                             model_dir=parameter['path'],
                             model_type=parameter['type_of_model'],
                             ad=['bound_box'],
                             verbose=False,
                             title=parameter['name'])
-        f = open(os.path.join(os.path.dirname(fragments_fname), 'predictions.txt'), 'a')
-        f.write(open('predictions_' + parameter['name'] + '.txt', 'r').read())
-        f.close()
-        os.remove('predictions_' + parameter['name'] + '.txt')
