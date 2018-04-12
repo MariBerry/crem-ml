@@ -125,20 +125,8 @@ def test_config(input_config: str) -> Dict:
                 assert type(num) == type(1), "{} is not defined properly".format(key)
                 config[key] = num
         # strip properties for chemaxon and sirms
-        elif (key == 'properties_chemaxon') or (key == 'properties_sirms'):
+        elif (key == 'properties_chemaxon') or (key == 'properties_sirms') \
+            or (key == 'optimization_methods'):
             config[key] = value.split(" ")
-
-    config['bounded_box'] = True if config['bounded_box'] == 'True' or config['bounded_box'] == 'true' else False
-    config['store_all_files'] = True if config['store_all_files'] == 'True' or config['store_all_files'] == 'true' else False
-
-    # print(138 * "_")
-    # for key, value in config.items():
-    #     if type(value) == type({}):
-    #         print("{}:".format(key))
-    #         for key_nested, value_nested in value.items():
-    #             print("  {}: {}".format(key_nested, value_nested))
-    #     else:
-    #         print("{}: {}".format(key, value))
-    # print(138 * "_")
 
     return config
