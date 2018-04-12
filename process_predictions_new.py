@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 
 import argparse
+import os
 
 import numpy as np
 import pandas as pd
+pd.options.mode.chained_assignment = None
 
 import pareto_simple_cull as pareto_alg
+from optimizer_utils import save_output_poll
 
 from sympy import symbols
 from sympy.parsing.sympy_parser import parse_expr
@@ -53,13 +56,89 @@ def prepare_working_arr(in_pred: List, parameters: List, bounded_box: bool) -> p
 
     return tables
 
+def parse_threshold(thresholds: List) -> List:
+    """
+    Convert input thresholds to parsed 2D list
 
-def main(in_sdf, in_pred, out, parameters, method, desirability, threshold, ad):
+    :param thresholds: list of thresholds, e.g. ['more4', 'betwenn-0.5to1', less'-2']
+    :return: list of parsed threshold, e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
+    """
+
+    threshold_match = []
+    for threshold in thresholds:
+        if 'less' in threshold:
+            threshold_match.append(['less', float(threshold[4:])])
+        elif 'more' in threshold:
+            threshold_match.append(['more', float(threshold[4:])])
+        elif 'between' in threshold:
+            threshold_match.append(
+                ['between', float(threshold[7:].split('to')[0]), float(threshold[7:].split('to')[1])])
+    return threshold_match
+
+def compute_distance_from_threshold(x: float, threshold: List) -> float:
+    """
+    Compute distance of predicted value from threshold value.
+    This function is applied on pandas DataFrame.
+
+    :param x: predicted value
+    :param threshold: parsed threshold list, e.g. ['more', 7]
+    :return: computed distance from one predicted value
+    """
+
+    if threshold[0] == 'more':
+        if x > threshold[1]:
+            return 0
+        else:
+            return threshold[1] - x
+
+    elif threshold[0] == 'less':
+        if x < threshold[1]:
+            return 0
+        else:
+            return x - threshold[1]
+
+    else:   # between
+        if x >= threshold[1] and x <= threshold[2]:
+            return 0
+        else:
+            return threshold[1] - x if x < threshold[1] else x - threshold[2]
+
+def main(in_sdf, in_pred, out, parameters, optimization_methods,
+         desirabilities, thresholds, ad):
+
+    # process all predictions
     predictions = prepare_working_arr(in_pred, parameters, ad)
     if predictions is None:
         print('Compounds are not in ad. Calculating outside ad!')
         predictions = prepare_working_arr(in_pred, parameters, False)
-    print(predictions)
+
+    # filtering
+    thresholds = parse_threshold(thresholds)
+
+    # compute distances from thresholds and use it with pareto if specified
+    pareto_predictions = predictions.copy()
+    for parameter, threshold in zip(parameters, thresholds):
+        pareto_predictions[parameter] = predictions[parameter].apply(compute_distance_from_threshold,
+                                                              threshold=threshold)
+
+    output_filtering = pareto_predictions[pareto_predictions.sum(axis=1) == 0]
+    output_filtering = predictions.loc[output_filtering.index].copy()
+
+    for method in optimization_methods:
+        if method == 'pareto':
+
+            # use compounds which are not in threshold
+            pareto_predictions = pareto_predictions[pareto_predictions.sum(axis=1) > 0]
+
+        elif method == 'desirability':
+            print('desirability')
+        else:
+            print('Unspecified optimization method!')
+
+    if output_filtering.shape[0] > 0:
+        save_output_poll(in_sdf,
+                         os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
+                         output_filtering)
 
 
 if __name__ == '__main__':
@@ -74,15 +153,15 @@ if __name__ == '__main__':
                         help='processed predictions using specified opt. method')
     parser.add_argument('-p', '--parameters', required=True, nargs='*',
                         help='parameters for prediction')
-    parser.add_argument('-m', '--method', required=True,
+    parser.add_argument('-m', '--methods', required=True, nargs='*',
                         help='method for processing predictions: pareto or desirability')
-    parser.add_argument('-d', '--desirability', nargs='*',
+    parser.add_argument('-d', '--desirabilities', nargs='*',
                         help='if desirability method specified, need to specify desirability string')
-    parser.add_argument('-t', '--threshold', required=True, nargs='*',
+    parser.add_argument('-t', '--thresholds', required=True, nargs='*',
                         help='thresholds to be match, written in the same order as properties')
     parser.add_argument('-a', '--ad', action='store_true', default=False,
                         help='save to output file only if it is in the application domain')
     args = vars(parser.parse_args())
 
     main(args['in_sdf'], args['in_pred'], args['out'], args['parameters'],
-         args['method'], args['desirability'], args['threshold'], args['ad'])
+         args['methods'], args['desirabilities'], args['thresholds'], args['ad'])

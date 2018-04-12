@@ -5,8 +5,13 @@ import shutil
 from subprocess import call
 import sqlite3 as lite
 from rdkit import Chem
+import pandas as pd
 
 from typing import List
+from typing import NewType
+pandas_table = NewType('Processed pandas table with id of compound and predicted properties',
+                      pd.DataFrame
+                      )
 
 sys.path.insert(1, os.path.join(sys.path[0], 'spci'))
 import calc_atomic_properties_chemaxon
@@ -16,6 +21,27 @@ import predict
 sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
 import sirms
 
+
+def save_output_poll(in_sdf: str, out_fname: str, output_poll: pandas_table) -> None:
+    """
+    Save list of selected compounds into file.
+
+    :param in_sdf: path to input sdf file
+    :param out_fname: path to output sdf file
+    :output_poll: pandas table with selected compounds
+    """
+
+    output = Chem.SDWriter(out_fname)
+
+    # get generator of mols in sdf file
+    supplier = Chem.SDMolSupplier(in_sdf)
+
+    for mol in supplier:
+        if mol.GetProp('ID') in output_poll.index:
+            for col in output_poll.columns:
+                mol.SetProp('predicted_{}'.format(col),
+                            str(output_poll.loc[mol.GetProp('ID'), col]))
+            output.write(mol)
 
 def create_database(working_dir: str, parameter_to_optimize: List) -> str:
     """
