@@ -11,7 +11,7 @@ import datetime
 
 import process_config
 import optimizer_utils
-import process_predictions_new
+import process_predictions
 
 
 def optimize(settings: Dict) -> None:
@@ -97,7 +97,7 @@ def optimize(settings: Dict) -> None:
             list_of_prediction_files.append(
                 os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
 
-        process_predictions_new.main(settings['seed_structure'],
+        process_predictions.main(settings['seed_structure'],
                                      list_of_prediction_files,
                                      os.path.join(generation_dir, 'processed_predictions.txt'),
                                      [parameter['name'] for parameter in parameters_list_dicts],
