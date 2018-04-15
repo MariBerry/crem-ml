@@ -118,7 +118,7 @@ def prepare_points_for_pareto(table: pandas_table) -> List:
 
 
 def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
-         desirabilities, thresholds, ad):
+         thresholds, ad, desirabilities=[], n_compounds=0):
 
     selected_compounds_index = set()
 
@@ -156,8 +156,10 @@ def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
                 selected_compounds_index.add(index)
 
         elif method == 'desirability':
-
             print('desirability')
+            print(desirabilities)
+            print(n_compounds)
+
         else:
             print('Unspecified optimization method!')
 
@@ -185,13 +187,16 @@ if __name__ == '__main__':
                         help='parameters for prediction')
     parser.add_argument('-m', '--methods', required=True, nargs='*',
                         help='method for processing predictions: pareto or desirability')
-    parser.add_argument('-d', '--desirabilities', nargs='*',
-                        help='if desirability method specified, need to specify desirability string')
     parser.add_argument('-t', '--thresholds', required=True, nargs='*',
                         help='thresholds to be match, written in the same order as properties')
     parser.add_argument('-a', '--ad', action='store_true', default=False,
                         help='save to output file only if it is in the application domain')
+    parser.add_argument('-d', '--desirabilities', nargs='*',
+                        help='if desirability method specified, need to specify desirability string')
+    parser.add_argument('-n', '--n_compounds', action='store', type=int,
+                        help='if desirability method specified, need to specify number of selected compounds')
     args = vars(parser.parse_args())
 
     main(args['in_sdf'], args['in_pred'], args['out'], args['parameters'],
-         args['methods'], args['desirabilities'], args['thresholds'], args['ad'])
+         args['methods'], args['thresholds'], args['ad'],
+         args['desirabilities'], args['n_compounds'])

@@ -102,9 +102,10 @@ def optimize(settings: Dict) -> None:
                                      os.path.join(generation_dir, 'processed_predictions.txt'),
                                      [parameter['name'] for parameter in parameters_list_dicts],
                                      settings['optimization_methods'],
-                                     [parameter['desirability'] for parameter in parameters_list_dicts],
                                      [parameter['threshold'] for parameter in parameters_list_dicts],
-                                     settings['bounded_box']
+                                     settings['bounded_box'],
+                                     [parameter['desirability'] for parameter in parameters_list_dicts],
+                                     settings['number_of_selected_compounds']
                                      )
 
 

@@ -16,7 +16,7 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['std_rules', 'path_to_file_with_std_rules'],
                     ['chemaxon', 'path_to_chemaxon_bin_folder'],
                     ['seed_structure', 'path_to_seed_structure'],
-                    ['number_of_selected_compounds', 'fill'],
+                    ['number_of_selected_compounds', 'fill only if desirability is specified'],
                     ['bounded_box', 'True or False'],              # True
                     ['properties_chemaxon', 'fill'],      # 'charge logp acc don refractivity'
                     ['properties_sirms', 'fill'],         # 'CHARGE LOGP HB REFRACTIVITY'
@@ -114,10 +114,10 @@ def test_config(input_config: str) -> Dict:
                 assert isfile(os.path.join(config[key]['path'], alg + ".pkl")), \
                         "{} doesn't exists".format(os.path.join(config[key]['path'], alg + ".pkl"))
         # check settings with numbers
-        elif (key == 'number_of_selected_compounds') or (key == 'max_cuts') \
+        elif (key == 'n_cores') or (key == 'max_cuts') \
             or (key == 'radius') or (key == 'number_of_worst_fragments') \
             or (key == 'max_frag_size') or (key == 'num_of_generation') \
-            or (key == 'num_parameters') or (key == 'n_cores'):
+            or (key == 'num_parameters'):
                 try:
                     num = int(value)
                 except:
@@ -128,5 +128,14 @@ def test_config(input_config: str) -> Dict:
         elif (key == 'properties_chemaxon') or (key == 'properties_sirms') \
             or (key == 'optimization_methods'):
             config[key] = value.split(" ")
+
+    # if user specify desirabilty then user must specify number of selected of compounds
+    if 'desirability' in config['optimization_methods']:
+        try:
+            num = int(config['number_of_selected_compounds'])
+        except:
+            num = config['number_of_selected_compounds']
+        assert type(num) == type(1), "number_of_selected_compounds are not defined properly"
+        config['number_of_selected_compounds'] = num
 
     return config
