@@ -103,8 +103,24 @@ def compute_distance_from_threshold(x: float, threshold: List) -> float:
         else:
             return threshold[1] - x if x < threshold[1] else x - threshold[2]
 
-def main(in_sdf, in_pred, out, parameters, optimization_methods,
+def prepare_points_for_pareto(table: pandas_table) -> List:
+    """
+    Process pandas table into list of points which are distances from threshold.
+
+    :param table: pandas table with distances from threshold of compounds
+    :return: list of lists with distances, e.g. [[dist11, dist12], [dist21, dist22]]
+    """
+
+    points = []
+    for index, row in table.iterrows():
+        points.append(row.tolist())
+    return points
+
+
+def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
          desirabilities, thresholds, ad):
+
+    selected_compounds_index = set()
 
     # process all predictions
     predictions = prepare_working_arr(in_pred, parameters, ad)
@@ -121,6 +137,7 @@ def main(in_sdf, in_pred, out, parameters, optimization_methods,
         pareto_predictions[parameter] = predictions[parameter].apply(compute_distance_from_threshold,
                                                               threshold=threshold)
 
+    # find compounds which are in threshold
     output_filtering = pareto_predictions[pareto_predictions.sum(axis=1) == 0]
     output_filtering = predictions.loc[output_filtering.index].copy()
 
@@ -130,7 +147,16 @@ def main(in_sdf, in_pred, out, parameters, optimization_methods,
             # use compounds which are not in threshold
             pareto_predictions = pareto_predictions[pareto_predictions.sum(axis=1) > 0]
 
+            input_to_pareto = prepare_points_for_pareto(pareto_predictions)
+
+            # get list of indexes from pareto frontier
+            pareto = pareto_alg.simple_cull(input_to_pareto, pareto_alg.dominates_min)
+
+            for index in predictions.loc[pareto_predictions.iloc[pareto].index].index:
+                selected_compounds_index.add(index)
+
         elif method == 'desirability':
+
             print('desirability')
         else:
             print('Unspecified optimization method!')
@@ -140,6 +166,10 @@ def main(in_sdf, in_pred, out, parameters, optimization_methods,
                          os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
                          output_filtering)
 
+    # save selected compounds
+    save_output_poll(in_sdf,
+                     out_fname,
+                     predictions.loc[list(selected_compounds_index)])
 
 if __name__ == '__main__':
 
