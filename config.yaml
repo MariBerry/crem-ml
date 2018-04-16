@@ -13,6 +13,7 @@ properties_calc_contrib: overall
 smart_string: '[#6+0;!$(*=,#[!#6])]!@!=!#[*]'
 max_cuts: 3
 radius: 3
+keep_stereo: False
 replacement_database: /home/david/Documents/projects/dp/optimizer/replacement_chembl_cuts4_H.db
 number_of_worst_fragments: 3
 max_frag_size: 7

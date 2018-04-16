@@ -17,6 +17,7 @@ sys.path.insert(1, os.path.join(sys.path[0], 'spci'))
 import calc_atomic_properties_chemaxon
 import filter_descriptors
 import predict
+import find_frags_auto_rdkit as find_frags
 
 sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
 import sirms
@@ -198,7 +199,7 @@ def calculate_atomic_prop(input_sdf_file: str, chemaxon_path: str, properties: L
 def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
                                 properties: List, output_format: str,
                                 n_cores: int, copy_setup: bool=True,
-                                fragments_fname=None):
+                                fragments_fname=None) -> None:
     """
     Create files with descriptors
 
@@ -254,7 +255,7 @@ def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
                                    out_fname=x_fname,
                                    file_format=output_format)
 
-def predict_properties(parameters: List, fragments_fname: str, output_format: str):
+def predict_properties(parameters: List, descriptors_fname: str, output_format: str) -> None:
     """
     Creates summarized file with predictions
 
@@ -265,9 +266,9 @@ def predict_properties(parameters: List, fragments_fname: str, output_format: st
 
     for parameter in parameters:
         print("Prediction for {} started".format(parameter['name']))
-        output_file_name = os.path.join(os.path.dirname(fragments_fname),
+        output_file_name = os.path.join(os.path.dirname(descriptors_fname),
                                         'predictions_{}.txt'.format(parameter['name']))
-        predict.main_params(x_fname=fragments_fname,
+        predict.main_params(x_fname=descriptors_fname,
                             input_format=output_format,
                             out_fname=output_file_name,
                             model_names=parameter['types_of_alg'],
@@ -276,3 +277,30 @@ def predict_properties(parameters: List, fragments_fname: str, output_format: st
                             ad=['bound_box'],
                             verbose=False,
                             title=parameter['name'])
+
+def find_frags_rdkit(input_sdf_file: str, fragment_ids_file: str,
+                     smarts_string: str, max_cuts: int, radius: List,
+                     keep_stereo: bool, error_fname: str,
+                     verbose: bool=False) -> None:
+    """
+    Creates file with fragments from sdf file
+
+    :param input_sdf_file: input file with compounds
+    :param fragment_ids_file: name of output file with fragment ids
+    :param smarts_string: ******NOT SURE******
+    :param max_cuts: ******NOT SURE******
+    :param radius: ******NOT SURE******
+    :param keep_stereo: ******NOT SURE******
+    :param: error_fname: path to log file from this function
+    :param verbose: false default
+    """
+
+    print("Finding fragments has started")
+    find_frags.main_params(in_sdf=input_sdf_file,
+                                out_txt=fragment_ids_file,
+                                query=smarts_string,
+                                max_cuts=max_cuts,
+                                radius = radius,
+                                keep_stereo = keep_stereo,
+                                verbose=verbose,
+                                error_fname=error_fname)
