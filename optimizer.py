@@ -103,9 +103,10 @@ def optimize(settings: Dict, input_config: str) -> None:
             list_of_prediction_files.append(
                 os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
 
+        settings['processed_predictions_file'] = os.path.join(generation_dir, 'processed_predictions.txt')
         num_of_fitted_compounds += process_predictions.main(settings['seed_structure'],
                                      list_of_prediction_files,
-                                     os.path.join(generation_dir, 'processed_predictions.txt'),
+                                     settings['processed_predictions_file'],
                                      [parameter['name'] for parameter in parameters_list_dicts],
                                      settings['optimization_methods'],
                                      [parameter['threshold'] for parameter in parameters_list_dicts],
@@ -113,9 +114,20 @@ def optimize(settings: Dict, input_config: str) -> None:
                                      [parameter['desirability'] for parameter in parameters_list_dicts],
                                      settings['number_of_selected_compounds']
                                      )
-        
+
         if num_of_fitted_compounds >= settings['num_output_compounds']:
             print("Optimizer reached number of fitted compounds specified in config.")
+
+        # find fragments
+        settings['fragments_ids_file'] = os.path.join(generation_dir, 'fragments_ids.txt')
+        error_fname_frag = os.path.join(generation_dir, 'fragments_log.log')
+        optimizer_utils.find_frags_rdkit(settings['processed_predictions_file'],
+                                         settings['fragments_ids_file'],
+                                         settings['smart_string'],
+                                         settings['max_cuts'],
+                                         settings['radius'],
+                                         settings['keep_stereo'],
+                                         error_fname_frag)
 
 
 

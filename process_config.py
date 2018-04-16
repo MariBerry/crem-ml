@@ -25,6 +25,7 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['smart_string', "'[#6+0;!$(*=,#[!#6])]!@!=!#[*]'"],
                     ['max_cuts', 'fill'],
                     ['radius', 'fill'],
+                    ['keep_stereo', 'True or False'],
                     ['replacement_database', 'path_to_database_with_replacement'],
                     ['number_of_worst_fragments', 'fill'],
                     ['max_frag_size', 'fill'],
@@ -138,5 +139,9 @@ def test_config(input_config: str) -> Dict:
             num = config['number_of_selected_compounds']
         assert type(num) == type(1), "number_of_selected_compounds are not defined properly"
         config['number_of_selected_compounds'] = num
+
+    # radius must be in list format
+    if type(config['radius']) != type([]):
+        config['radius'] = [config['radius']]
 
     return config
