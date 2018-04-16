@@ -14,20 +14,26 @@ import optimizer_utils
 import process_predictions
 
 
-def optimize(settings: Dict) -> None:
+def optimize(settings: Dict, input_config: str) -> None:
     """
     Run all optimization tasks
 
     :param settings: dictionary with input settings
+    :param input_config: path to input config file
     """
     # for new IDs
     num_of_compounds = 0
+
+    # for fitted compounds
+    num_of_fitted_compounds = 0
 
     parameters_list_dicts = [settings[parameter] for parameter in settings if "param_" in parameter]
 
     # create database
     settings['output_database'] = optimizer_utils.create_database(
         settings['working_dir'], [parameter['name'] for parameter in parameters_list_dicts])
+
+    shutil.copyfile(input_config, os.path.join(settings['working_dir'], 'config.yaml'))
 
     # create output folder
     settings['working_dir'] = os.path.join(settings['working_dir'], 'out')
@@ -97,7 +103,7 @@ def optimize(settings: Dict) -> None:
             list_of_prediction_files.append(
                 os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
 
-        process_predictions.main(settings['seed_structure'],
+        num_of_fitted_compounds += process_predictions.main(settings['seed_structure'],
                                      list_of_prediction_files,
                                      os.path.join(generation_dir, 'processed_predictions.txt'),
                                      [parameter['name'] for parameter in parameters_list_dicts],
@@ -107,6 +113,9 @@ def optimize(settings: Dict) -> None:
                                      [parameter['desirability'] for parameter in parameters_list_dicts],
                                      settings['number_of_selected_compounds']
                                      )
+        
+        if num_of_fitted_compounds >= settings['num_output_compounds']:
+            print("Optimizer reached number of fitted compounds specified in config.")
 
 
 
@@ -127,7 +136,7 @@ def main():
         process_config.create_config(args['output_location'], args['n_params'])
     else:
         settings = process_config.test_config(args['input_config'])
-        optimize(settings)
+        optimize(settings, args['input_config'])
 
 if __name__ == '__main__':
     main()
