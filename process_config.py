@@ -12,6 +12,7 @@ from typing import List
 
 CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['num_parameters', 'number_of_parameters_to optimize'],
+                    ['num_output_compounds', 'number of fitted compounds'],
                     ['setup_file', 'path_to_setup_file'],
                     ['std_rules', 'path_to_file_with_std_rules'],
                     ['chemaxon', 'path_to_chemaxon_bin_folder'],
@@ -43,7 +44,7 @@ PARAMETER_STRUCTURE = [['name', 'name_of_parameter'],
                        ['desirability', 'fill']
                        ]
 
-def create_config(output_dir: str, num_of_parametrs: int, file_name: str='config.yaml') -> None:
+def create_config(output_dir: str, num_of_parameters: int, file_name: str='config.yaml') -> None:
     """
     Create empty file for input settings for optimizer
 
@@ -61,13 +62,13 @@ def create_config(output_dir: str, num_of_parametrs: int, file_name: str='config
     # working dir
     CONFIG_STRUCTURE[working_dir_index][1] = os.path.abspath(output_dir)
     # num param
-    CONFIG_STRUCTURE[num_parameters_index][1] = num_of_parametrs
+    CONFIG_STRUCTURE[num_parameters_index][1] = num_of_parameters
 
     conf_file = os.path.join(output_dir, file_name)
     with open(conf_file, 'w') as config:
         for item in CONFIG_STRUCTURE:
             config.write("{}: {}\n".format(item[0], item[1]))
-        for i in range(num_of_parametrs):
+        for i in range(num_of_parameters):
             config.write("param_{}: \n".format(str(i)))
             for item in PARAMETER_STRUCTURE:
                 config.write("  {}: {}\n".format(item[0], item[1]))
@@ -117,7 +118,7 @@ def test_config(input_config: str) -> Dict:
         elif (key == 'n_cores') or (key == 'max_cuts') \
             or (key == 'radius') or (key == 'number_of_worst_fragments') \
             or (key == 'max_frag_size') or (key == 'num_of_generation') \
-            or (key == 'num_parameters'):
+            or (key == 'num_parameters') or (key == 'num_output_compounds'):
                 try:
                     num = int(value)
                 except:

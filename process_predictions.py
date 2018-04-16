@@ -230,6 +230,8 @@ def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
                      out_fname,
                      predictions.loc[list(selected_compounds_index)])
 
+    return output_filtering.shape[0]
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
