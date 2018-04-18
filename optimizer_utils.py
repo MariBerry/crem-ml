@@ -18,6 +18,7 @@ import calc_atomic_properties_chemaxon
 import filter_descriptors
 import predict
 import find_frags_auto_rdkit as find_frags
+import filter_descriptors
 
 sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
 import sirms

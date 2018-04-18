@@ -103,7 +103,7 @@ def optimize(settings: Dict, input_config: str) -> None:
             list_of_prediction_files.append(
                 os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
 
-        settings['processed_predictions_file'] = os.path.join(generation_dir, 'processed_predictions.txt')
+        settings['processed_predictions_file'] = os.path.join(generation_dir, 'processed_predictions.sdf')
         num_of_fitted_compounds += process_predictions.main(settings['seed_structure'],
                                      list_of_prediction_files,
                                      settings['processed_predictions_file'],
@@ -128,6 +128,15 @@ def optimize(settings: Dict, input_config: str) -> None:
                                          settings['radius'],
                                          settings['keep_stereo'],
                                          error_fname_frag)
+
+        # calculate sirms descriptors of fragments
+        optimizer_utils.calculate_sirms_descriptors(settings['processed_predictions_file'],
+                                    settings['setup_file'],
+                                    settings['properties_sirms'],
+                                    settings['output_format'],
+                                    settings['n_cores'],
+                                    fragments_fname=settings['fragments_ids_file']
+                                    )
 
 
 
