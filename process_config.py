@@ -128,7 +128,7 @@ def test_config(input_config: str) -> Dict:
                 config[key] = num
         # strip properties for chemaxon and sirms
         elif (key == 'properties_chemaxon') or (key == 'properties_sirms') \
-            or (key == 'optimization_methods'):
+            or (key == 'optimization_methods') or (key == 'properties_calc_contrib'):
             config[key] = value.split(" ")
 
     # if user specify desirabilty then user must specify number of selected of compounds

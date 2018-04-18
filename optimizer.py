@@ -137,6 +137,16 @@ def optimize(settings: Dict, input_config: str) -> None:
                                     settings['n_cores'],
                                     fragments_fname=settings['fragments_ids_file']
                                     )
+        new_fragments_fname = os.path.join(generation_dir, 'new_x.txt')
+
+        # calculate fragments contributions
+        optimizer_utils.calc_frag_contrib(new_fragments_fname,
+                                          [parameter['name'] for parameter in parameters_list_dicts],
+                                          [parameter['types_of_alg'] for parameter in parameters_list_dicts],
+                                          [parameter['path'] for parameter in parameters_list_dicts],
+                                          [parameter['type_of_model'] for parameter in parameters_list_dicts],
+                                          settings['properties_calc_contrib'],
+                                          settings['output_format'])
 
 
 
