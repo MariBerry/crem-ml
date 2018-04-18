@@ -19,6 +19,8 @@ import filter_descriptors
 import predict
 import find_frags_auto_rdkit as find_frags
 import filter_descriptors
+import calc_frag_contrib as frag_contrib
+
 
 sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))
 import sirms
@@ -305,3 +307,34 @@ def find_frags_rdkit(input_sdf_file: str, fragment_ids_file: str,
                                 keep_stereo = keep_stereo,
                                 verbose=verbose,
                                 error_fname=error_fname)
+
+def calc_frag_contrib(x_fname: str, parameters: List, types_of_alg: List,
+                      models_dir: List, models_type: List,
+                      properties_calc_contrib: List, in_format: str) -> None:
+    """
+    Calculate contributions of fragments. All records in list must be specified
+    in same order.
+
+    :param x_fname: input file with descriptors of fragments
+    :param parameters: list with parameter names
+    :param types_of_alg: list with types of alg used for predictions, e.g. [['rf', 'svm'], ['rf']]
+    :param models_dir: list of paths to models directories
+    :param models_type: list of types of models, e.g. ['reg', 'class']
+    :param properties_calc_contrib: ******NOT SURE****** list, e.g.['overall']
+    :param: in_format: ******NOT SURE****** 'svm'
+    """
+
+    for parameter, type_of_alg, model_dir, model_type in zip(parameters, types_of_alg, models_dir, models_type):
+        print("Fragment contribution for {} started".format(parameter))
+        frag_contrib.main_params(x_fname=x_fname,
+                                 out_fname=os.path.join(os.path.dirname(x_fname),
+                                                        'contrib_{}.txt'.format(parameter)),
+                                 model_names=type_of_alg,
+                                 model_dir=model_dir,
+                                 prop_names=properties_calc_contrib,
+                                 model_type=model_type,
+                                 verbose=False,
+                                 save_pred=True,
+                                 input_format=in_format,
+                                 long_format=True,
+                                 save_frag_ids=True)

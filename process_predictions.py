@@ -20,6 +20,51 @@ pandas_table = NewType('Processed pandas table with id of compound and predicted
                       )
 
 
+def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> None:
+
+    """
+    Save output dictionary to file with predicted values. Can't use rdkit
+    save_output_poll in optimizer_utils. Somehow it changes structure of compounds
+    and during calculating fragment contribution it changes predicted values
+
+    :param in_sdf: path to input sdf file
+    :param out_fname: path to output sdf file
+    :output_poll: pandas table with selected compounds
+    """
+
+    output_string = ''
+
+    in_file = open(input_sdf, 'r')
+    out_file = open(out_fname, 'w')
+    iter_file = iter(in_file)
+    not_find_beg = True
+    not_find_end = True
+    for id in output_poll.index:
+        while not_find_beg:
+            line = in_file.readline().rstrip()
+            if line == id:
+                output_string += line + '\n'
+                while not_find_beg:
+                    line = in_file.readline().rstrip()
+                    if '$$$$' in line:
+                        for record, parameter in zip(output_poll.loc[id], output_poll.columns):
+                            output_string += '>  <pred_{}>\n {}\n\n'.format(parameter, record)
+                        output_string += line + '\n'
+                        not_find_end = False
+                        not_find_beg = False
+                    else:
+                        output_string += line + '\n'
+            else:
+                while not '$$$$' in line:
+                    line = in_file.readline().rstrip()
+                pass
+        in_file.seek(0)
+        not_find_beg, not_find_end = True, True
+
+    out_file.write(output_string)
+    out_file.close()
+    in_file.close()
+
 def prepare_working_arr(in_pred: List, parameters: List, bounded_box: bool) -> pandas_table:
     """
     Reads file with predictions and process it into pandas table
@@ -221,14 +266,14 @@ def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
             print('Unspecified optimization method!')
 
     if output_filtering.shape[0] > 0:
-        save_output_poll(in_sdf,
-                         os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
-                         output_filtering)
+        save_output(in_sdf,
+                    os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
+                    output_filtering)
 
     # save selected compounds
-    save_output_poll(in_sdf,
-                     out_fname,
-                     predictions.loc[list(selected_compounds_index)])
+    save_output(in_sdf,
+                out_fname,
+                predictions.loc[list(selected_compounds_index)])
 
     return output_filtering.shape[0]
 
