@@ -12,6 +12,7 @@ import datetime
 import process_config
 import optimizer_utils
 import process_predictions
+import process_contributions
 
 
 def optimize(settings: Dict, input_config: str) -> None:
@@ -147,6 +148,22 @@ def optimize(settings: Dict, input_config: str) -> None:
                                           [parameter['type_of_model'] for parameter in parameters_list_dicts],
                                           settings['properties_calc_contrib'],
                                           settings['output_format'])
+
+        # find worst fragments
+        settings['fragments_contrib_files'] = [os.path.join(generation_dir, 'contrib_{}.txt'.format(parameter['name']))
+                                               for parameter in parameters_list_dicts]
+        settings['worst_fragments_file'] = os.path.join(generation_dir, 'worst_fragments.txt')
+        types_of_alg_contrib = ['_'.join(parameter['types_of_alg']) for parameter in parameters_list_dicts]
+
+        process_contributions.main(settings['processed_predictions_file'],
+                                   settings['fragments_contrib_files'],
+                                   os.path.join(generation_dir, 'fragment_contrib_norm.txt'),
+                                   settings['worst_fragments_file'],
+                                   [parameter['name'] for parameter in parameters_list_dicts],
+                                   [parameter['range'] for parameter in parameters_list_dicts],
+                                   types_of_alg_contrib,
+                                   [parameter['threshold'] for parameter in parameters_list_dicts],
+                                   settings['number_of_worst_fragments'])
 
 
 
