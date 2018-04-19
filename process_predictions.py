@@ -8,7 +8,7 @@ import pandas as pd
 pd.options.mode.chained_assignment = None
 
 import pareto_simple_cull as pareto_alg
-from optimizer_utils import save_output_poll
+from optimizer_utils import parse_threshold
 
 from sympy import symbols
 from sympy.parsing.sympy_parser import parse_expr
@@ -100,25 +100,6 @@ def prepare_working_arr(in_pred: List, parameters: List, bounded_box: bool) -> p
             return None
 
     return tables
-
-def parse_threshold(thresholds: List) -> List:
-    """
-    Convert input thresholds to parsed 2D list
-
-    :param thresholds: list of thresholds, e.g. ['more4', 'betwenn-0.5to1', less'-2']
-    :return: list of parsed threshold, e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
-    """
-
-    threshold_match = []
-    for threshold in thresholds:
-        if 'less' in threshold:
-            threshold_match.append(['less', float(threshold[4:])])
-        elif 'more' in threshold:
-            threshold_match.append(['more', float(threshold[4:])])
-        elif 'between' in threshold:
-            threshold_match.append(
-                ['between', float(threshold[7:].split('to')[0]), float(threshold[7:].split('to')[1])])
-    return threshold_match
 
 def compute_distance_from_threshold(x: float, threshold: List) -> float:
     """
