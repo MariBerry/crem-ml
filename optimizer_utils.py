@@ -334,7 +334,26 @@ def calc_frag_contrib(x_fname: str, parameters: List, types_of_alg: List,
                                  prop_names=properties_calc_contrib,
                                  model_type=model_type,
                                  verbose=False,
-                                 save_pred=True,
+                                 save_pred=False,
                                  input_format=in_format,
                                  long_format=True,
                                  save_frag_ids=True)
+
+def parse_threshold(thresholds: List) -> List:
+    """
+    Convert input thresholds to parsed 2D list
+
+    :param thresholds: list of thresholds, e.g. ['more4', 'betwenn-0.5to1', less'-2']
+    :return: list of parsed threshold, e.g. [['more',4], ['between', -0.5, 1], ['less', -2]]
+    """
+
+    threshold_match = []
+    for threshold in thresholds:
+        if 'less' in threshold:
+            threshold_match.append(['less', float(threshold[4:])])
+        elif 'more' in threshold:
+            threshold_match.append(['more', float(threshold[4:])])
+        elif 'between' in threshold:
+            threshold_match.append(
+                ['between', float(threshold[7:].split('to')[0]), float(threshold[7:].split('to')[1])])
+    return threshold_match
