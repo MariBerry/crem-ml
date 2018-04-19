@@ -183,6 +183,8 @@ def get_norm_value(x_input: float, function: List) -> float:
 def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
          thresholds, ad, desirabilities=[], n_compounds=0):
 
+    print('Processing predictions ...')
+
     selected_compounds_index = set()
 
     # process all predictions

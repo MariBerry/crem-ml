@@ -165,8 +165,6 @@ def optimize(settings: Dict, input_config: str) -> None:
                                    [parameter['threshold'] for parameter in parameters_list_dicts],
                                    settings['number_of_worst_fragments'])
 
-
-
 def main():
     parser = argparse.ArgumentParser(description='System for designing new drugs')
     parser.add_argument('-i', '--input_config',
