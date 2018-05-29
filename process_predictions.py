@@ -220,12 +220,13 @@ def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
             for index in predictions.loc[distance_predictions.iloc[pareto].index].index:
                 selected_compounds_index.add(index)
 
+
         elif method == 'desirability':
 
             desirability_predictions = predictions.copy()
 
             # use compounds which are not in threshold
-            desirability_predictions = desirability_predictions.loc[distance_predictions.sum(axis=1) > 0]
+            desirability_predictions = desirability_predictions.loc[distance_predictions[distance_predictions.sum(axis=1) > 0].index]
 
             # we have less or equal compounds in input sdf then we specified
             # that we need from this stage, so we use all of them

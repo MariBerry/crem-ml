@@ -13,6 +13,7 @@ import process_config
 import optimizer_utils
 import process_predictions
 import process_contributions
+import frag_replacement
 
 
 def optimize(settings: Dict, input_config: str) -> None:
@@ -23,7 +24,7 @@ def optimize(settings: Dict, input_config: str) -> None:
     :param input_config: path to input config file
     """
     # for new IDs
-    num_of_compounds = 0
+    last_id_mol, num_of_compounds = 0, 0
 
     # for fitted compounds
     num_of_fitted_compounds = 0
@@ -55,6 +56,10 @@ def optimize(settings: Dict, input_config: str) -> None:
                                          settings['seed_structure'],
                                          settings['output_database'],
                                          gen)
+
+        if gen == 0:
+            last_id_mol = num_of_compounds
+
         # check if we have new compounds in new generation
         if tmp_num_comp == num_of_compounds:
             print("\nIn generation {} aren't new compounds".format(gen))
@@ -118,6 +123,7 @@ def optimize(settings: Dict, input_config: str) -> None:
 
         if num_of_fitted_compounds >= settings['num_output_compounds']:
             print("Optimizer reached number of fitted compounds specified in config.")
+            sys.exit()
 
         # find fragments
         settings['fragments_ids_file'] = os.path.join(generation_dir, 'fragments_ids.txt')
@@ -164,6 +170,19 @@ def optimize(settings: Dict, input_config: str) -> None:
                                    types_of_alg_contrib,
                                    [parameter['threshold'] for parameter in parameters_list_dicts],
                                    settings['number_of_worst_fragments'])
+
+        # replace fragments
+        new_compouds = os.path.join(generation_dir, '{}_gen_compounds.sdf'.format(gen))
+
+        last_id_mol = frag_replacement.main(settings['processed_predictions_file'],
+                                            settings['worst_fragments_file'],
+                                            settings['fragments_ids_file'],
+                                            settings['replacement_database'],
+                                            new_compouds,
+                                            last_id_mol)
+
+        settings['seed_structure'] = new_compouds
+
 
 def main():
     parser = argparse.ArgumentParser(description='System for designing new drugs')
