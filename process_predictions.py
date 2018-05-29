@@ -84,7 +84,7 @@ def prepare_working_arr(in_pred: List, parameters: List, bounded_box: bool) -> p
             if table[table.bound_box == 1].shape[0] == 0: # no compounds in ad
                 return None
             else:
-                table = table[table.bound_box == 1]
+                table.drop(table[table.bound_box==1].index, inplace=True)
 
         table.drop('bound_box', axis=1, inplace=True)
         cols_to_drop = list(range(1,table.shape[1]-1))
@@ -189,6 +189,7 @@ def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
 
     # process all predictions
     predictions = prepare_working_arr(in_pred, parameters, ad)
+
     if predictions is None:
         print('Compounds are not in ad. Calculating outside ad!')
         predictions = prepare_working_arr(in_pred, parameters, False)
@@ -255,6 +256,9 @@ def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
                     output_filtering)
 
     # save selected compounds
+    # every compounds were filtered
+    if len(selected_compounds_index) == 0:
+        selected_compounds_index = output_filtering.head(n_compounds).index
     save_output(in_sdf,
                 out_fname,
                 predictions.loc[list(selected_compounds_index)])
