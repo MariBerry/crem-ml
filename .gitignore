@@ -2,8 +2,6 @@
 models/
 sdf/
 __pycache__/
-setup.txt
-std_rules.xml
 back_log.txt
 tmp/
 replacement_chembl_cuts4_H.db

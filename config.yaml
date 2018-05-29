@@ -5,7 +5,7 @@ setup_file: /home/david/Documents/projects/dp/optimizer/setup.txt
 std_rules: /home/david/Documents/projects/dp/optimizer/std_rules.xml
 chemaxon: /home/david/opt/chemaxon/jchemsuite/bin
 seed_structure: /home/david/Documents/projects/test_dp/seed_structures.sdf
-number_of_selected_compounds: 5
+number_of_selected_compounds: 2
 bounded_box: True
 properties_chemaxon: charge logp acc don refractivity
 properties_sirms: CHARGE LOGP HB REFRACTIVITY
@@ -15,10 +15,10 @@ max_cuts: 3
 radius: 3
 keep_stereo: False
 replacement_database: /home/david/Documents/projects/dp/optimizer/replacement_chembl_cuts4_H.db
-number_of_worst_fragments: 3
+number_of_worst_fragments: 1
 max_frag_size: 7
 output_format: svm
-num_of_generation: 1
+num_of_generation: 4
 n_cores: 8
 optimization_methods: pareto desirability
 store_all_files: True

@@ -60,7 +60,7 @@ def create_database(working_dir: str, parameter_to_optimize: List) -> str:
 
     table_str = "CREATE TABLE optimizer_table"\
                     "(id TEXT NOT NULL,"\
-                    "smi TEXT NOT NULL,"\
+                    "smi TEXT NOT NULL UNIQUE,"\
                     "generation INTEGER NOT NULL,"\
                     "parent TEXT,"\
                     "transformation TEXT,"\
@@ -115,15 +115,15 @@ def add_mols_into_db(num_of_compounds: int, input_sdf: str, database: str, gen: 
             if gen == 0:
                 mol.SetProp("_Name", "ID{}".format(str(num_of_compounds)))
                 mol.SetProp("ID", "ID{}".format(str(num_of_compounds)))
-                mol.SetProp("parent", "None")
+                mol.SetProp("parent_name", "None")
                 mol.SetProp("transformation", "None")
                 new_sdf.write(mol)
 
             if smile not in mols_in_db:
-                insert.append(("ID" + str(num_of_compounds),
+                insert.append((mol.GetProp('ID'),
                                smile,
                                gen,
-                               mol.GetProp('parent'),
+                               mol.GetProp('parent_name'),
                                mol.GetProp('transformation')))
                 mols_in_db.append(smile)
                 num_of_compounds += 1
