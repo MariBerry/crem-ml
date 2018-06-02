@@ -65,7 +65,7 @@ def create_database(working_dir: str, parameter_to_optimize: List) -> str:
                     "parent TEXT,"\
                     "transformation TEXT,"\
                     "fit INTEGER,"
-    table_str += " REAL,".join(parameter_to_optimize) + " REAL, overall_prediction REAL)"
+    table_str += " REAL,".join(parameter_to_optimize) + " REAL)"
 
     if os.path.isfile(path_to_database):
         os.remove(path_to_database)
@@ -144,6 +144,20 @@ def add_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
         os.rename(new_sdf_path, input_sdf)
 
     return num_of_compounds
+
+def update_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
+    """
+    Read input sdf file, convert all mols into smiles, check if they are in DB,
+    and if not add them with all possible options, such as transformation rules,
+    parents, number of generation and so on.
+
+    :param input_sdf: path to input sdf file
+    :param database: path to output database
+    :param gen: actual generation of optimization
+    :return: number of compounds in database
+    """
+
+    return 0
 
 def quote_str(s: str) -> str:
     """
