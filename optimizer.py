@@ -109,13 +109,14 @@ def optimize(settings: Dict, input_config: str) -> None:
         settings['processed_predictions_file'] = os.path.join(generation_dir, 'processed_predictions.sdf')
         num_of_fitted_compounds += process_predictions.main(settings['seed_structure'],
                                      list_of_prediction_files,
+                                     settings['output_database'],
                                      settings['processed_predictions_file'],
                                      [parameter['name'] for parameter in parameters_list_dicts],
                                      settings['optimization_methods'],
                                      [parameter['threshold'] for parameter in parameters_list_dicts],
                                      settings['bounded_box'],
                                      [parameter['desirability'] for parameter in parameters_list_dicts],
-                                     settings['number_of_selected_compounds']
+                                     settings['number_of_selected_compounds'],
                                      )
 
         # update mols in database

@@ -4,6 +4,7 @@ import argparse
 import os
 
 import numpy as np
+import sqlite3 as lite
 import pandas as pd
 pd.options.mode.chained_assignment = None
 
@@ -129,6 +130,39 @@ def compute_distance_from_threshold(x: float, threshold: List) -> float:
         else:
             return threshold[1] - x if x < threshold[1] else x - threshold[2]
 
+def update_database(out_database: str, predictions: pandas_table,
+                    output_filtering: pandas_table) -> None:
+    """
+    Updates predicted values for compounds in database.
+
+    :param out_database: path to output database
+    :param predictions: prepared pandas table with all data
+    :param output_filtering: fitted compounds in table
+    """
+
+    columns = predictions.columns
+    database_columns = ["predicted_{}".format(cols) for cols in columns]
+
+    query = "UPDATE optimizer_table SET fit=?, "
+    query += "=?, ".join(database_columns) + "=? WHERE id=?"
+
+    con = lite.connect(out_database)
+    with con:
+        cursor = con.cursor()
+
+        for index, row in predictions.iterrows():
+            record = []
+            if index in output_filtering.index:
+                record.append(1)
+            else:
+                record.append(0)
+            for col in columns:
+                record.append(row[col])
+            record.append(index)
+
+            cursor.execute(query, tuple(record))
+        con.commit()
+
 def prepare_points_for_pareto(table: pandas_table) -> List:
     """
     Process pandas table into list of points which are distances from threshold.
@@ -180,8 +214,8 @@ def get_norm_value(x_input: float, function: List) -> float:
     return 0
 
 
-def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
-         thresholds, ad, desirabilities=[], n_compounds=0):
+def main(in_sdf, in_pred, out_database, out_fname, parameters,
+         optimization_methods, thresholds, ad, desirabilities=[], n_compounds=0):
 
     print('Processing predictions ...')
 
@@ -206,6 +240,8 @@ def main(in_sdf, in_pred, out_fname, parameters, optimization_methods,
     # find compounds which are in threshold
     output_filtering = distance_predictions[distance_predictions.sum(axis=1) == 0]
     output_filtering = predictions.loc[output_filtering.index].copy()
+
+    update_database(out_database, prepare_working_arr(in_pred, parameters, False), output_filtering)
 
     for method in optimization_methods:
         if method == 'pareto':
@@ -273,6 +309,8 @@ if __name__ == '__main__':
                         help='path to file which contains standardized compounds')
     parser.add_argument('-ip', '--in_pred', required=True, nargs='*',
                         help='path to files which contains predicted values for properties')
+    parser.add_argument('-od', '--output_database', required=True,
+                        help='path to output database')
     parser.add_argument('-o', '--out', required=True,
                         help='processed predictions using specified opt. method')
     parser.add_argument('-p', '--parameters', required=True, nargs='*',
@@ -287,8 +325,9 @@ if __name__ == '__main__':
                         help='if desirability method specified, need to specify desirability string')
     parser.add_argument('-n', '--n_compounds', action='store', type=int,
                         help='if desirability method specified, need to specify number of selected compounds')
+
     args = vars(parser.parse_args())
 
-    main(args['in_sdf'], args['in_pred'], args['out'], args['parameters'],
-         args['methods'], args['thresholds'], args['ad'],
+    main(args['in_sdf'], args['in_pred'], args['out_database'], args['out'],
+         args['parameters'], args['methods'], args['thresholds'], args['ad'],
          args['desirabilities'], args['n_compounds'])
