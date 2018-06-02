@@ -103,12 +103,12 @@ def replace(in_mol, frag_core, frag_env, frag_ids, db_cur, min_atoms=0, max_atom
 
 
 
-def make_replacements(input_sdf, input_worst, input_ids, db_cur, n_compounds, radius=3,
+def make_replacements(input_sdf, input_worst, input_ids, db_cur, radius=3,
                       min_size=0, max_size=7, min_rel_size=0, max_rel_size=0.5,
                       min_inc=-2, max_inc=+2, replace_cycles=False):
 
     new_products = []
-    id_mol = n_compounds
+    id_mol = 0
 
     compounds = Chem.SDMolSupplier(input_sdf, removeHs=False, sanitize=False)
     list_of_fragments = read_worst_and_ids(input_worst, input_ids)
@@ -145,16 +145,16 @@ def make_replacements(input_sdf, input_worst, input_ids, db_cur, n_compounds, ra
                     d.update(replace(mol, fragment[2], fragment[3], fragment[4], db_cur, min_atoms, max_atoms))
 
                 for new_mol in d.values():
-                    new_mol.SetProp('_Name', 'ID{}'.format(id_mol))
-                    new_mol.SetProp('ID', 'ID{}'.format(id_mol))
+                    new_mol.SetProp('_Name', 'ID_{}'.format(id_mol))
+                    new_mol.SetProp('ID', 'ID_{}'.format(id_mol))
                     new_mol.SetProp('parent_name', mol_name)
                     new_products.append(new_mol)
                     id_mol += 1
 
-    return new_products, id_mol
+    return new_products
 
 
-def main(input_sdf, input_worst, input_ids, input_connection_db, output_product_file, n_compounds):
+def main(input_sdf, input_worst, input_ids, input_connection_db, output_product_file):
 
     print('Replacing fragments ...')
 
@@ -162,13 +162,12 @@ def main(input_sdf, input_worst, input_ids, input_connection_db, output_product_
     conn = sqlite3.connect(input_connection_db)
     db_cur = conn.cursor()
 
-    products, last_id_mol = make_replacements(input_sdf, input_worst, input_ids, db_cur, n_compounds)
+    products = make_replacements(input_sdf, input_worst, input_ids, db_cur)
 
     w = Chem.SDWriter(output_product_file)
     for m in products: w.write(m)
     w.close()
     conn.close()
-    return last_id_mol
 
 
 if __name__ == '__main__':
@@ -184,11 +183,8 @@ if __name__ == '__main__':
                         help='path to the database with fragment replacements')
     parser.add_argument('-oc', '--out_compounds', metavar='new_compounds.sdf', required=True,
                         help='file name where you want to store new compounds')
-    parser.add_argument('-n', '--n_compounds', action='store', type=int,
-                        help='specifies number of used compounds, for new IDs')
 
     args = vars(parser.parse_args())
 
     main(args['input_sdf'], args['input_worst'], args['input_ids'],
-         args['input_connection_db'], args['output_product_file'],
-         args['n_compounds'])
+         args['input_connection_db'], args['output_product_file'])

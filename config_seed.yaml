@@ -3,7 +3,7 @@ num_output_compounds: 100
 setup_file: /home/david/Documents/projects/dp/optimizer/setup.txt
 std_rules: /home/david/Documents/projects/dp/optimizer/std_rules.xml
 chemaxon: /home/david/opt/chemaxon/jchemsuite/bin
-seed_structure: /home/david/Documents/projects/test_dp/seed_structures.sdf
+seed_structure: /home/david/Documents/projects/test_dp/seed.sdf
 number_of_selected_compounds: 2
 bounded_box: True
 properties_chemaxon: charge logp acc don refractivity
@@ -22,22 +22,6 @@ n_cores: 8
 optimization_methods: pareto desirability
 store_all_files: True
 param_0:
-  name: 5HT1A
-  path: /home/david/Documents/projects/dp/optimizer/models/5HT1A
-  types_of_alg: rf svm gbm
-  type_of_model: reg
-  threshold: more7
-  range: 10
-  desirability: 7:0,9:(x-7)/2,100:1
-param_1:
-  name: BBB
-  path: /home/david/Documents/projects/dp/optimizer/models/BBB
-  types_of_alg: rf svm gbm
-  type_of_model: class
-  threshold: more0.5
-  range: 1
-  desirability: 0.5:0,0.8:(1/0.3)*x-(5/3),100:1
-param_2:
   name: HIA
   path: /home/david/Documents/projects/dp/optimizer/models/HIA
   types_of_alg: rf svm gbm
@@ -45,7 +29,7 @@ param_2:
   threshold: more0.5
   range: 1
   desirability: 0.5:0,0.8:(1/0.3)*x-(5/3),100:1
-param_3:
+param_1:
   name: HLM
   path: /home/david/Documents/projects/dp/optimizer/models/HLM
   types_of_alg: rf svm gbm

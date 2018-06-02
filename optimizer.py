@@ -23,8 +23,6 @@ def optimize(settings: Dict, input_config: str) -> None:
     :param settings: dictionary with input settings
     :param input_config: path to input config file
     """
-    # for new IDs
-    last_id_mol, num_of_compounds = 0, 0
 
     # for fitted compounds
     num_of_fitted_compounds = 0
@@ -50,20 +48,19 @@ def optimize(settings: Dict, input_config: str) -> None:
            shutil.rmtree(generation_dir)
         os.makedirs(generation_dir)
 
-        # add new unique compounds into database
-        tmp_num_comp = num_of_compounds
-        num_of_compounds = optimizer_utils.add_mols_into_db(num_of_compounds,
-                                         settings['seed_structure'],
-                                         settings['output_database'],
-                                         gen)
+        # for new IDs and check if something was created
+        num_of_compounds = 0
 
         if gen == 0:
-            last_id_mol = num_of_compounds
+            # add new unique compounds into database
+            num_of_compounds = optimizer_utils.add_mols_into_db(settings['seed_structure'],
+                                                                settings['output_database'],
+                                                                gen)
 
-        # check if we have new compounds in new generation
-        if tmp_num_comp == num_of_compounds:
-            print("\nIn generation {} aren't new compounds".format(gen))
-            sys.exit()
+            # check if we have new compounds in new generation
+            if num_of_compounds == 0:
+                print("\nIn generation {} aren't new compounds".format(gen))
+                sys.exit()
 
         # copy input_sdf_file into gen directory
         new_sdf = os.path.join(generation_dir, 'input_dataset.sdf')
@@ -121,6 +118,9 @@ def optimize(settings: Dict, input_config: str) -> None:
                                      settings['number_of_selected_compounds']
                                      )
 
+        # update mols in database
+
+
         if num_of_fitted_compounds >= settings['num_output_compounds']:
             print("Optimizer reached number of fitted compounds specified in config.")
             sys.exit()
@@ -174,22 +174,29 @@ def optimize(settings: Dict, input_config: str) -> None:
         # replace fragments
         new_compouds = os.path.join(generation_dir, '{}_gen_compounds.sdf'.format(gen))
 
-        last_id_mol = frag_replacement.main(settings['processed_predictions_file'],
-                                            settings['worst_fragments_file'],
-                                            settings['fragments_ids_file'],
-                                            settings['replacement_database'],
-                                            new_compouds,
-                                            last_id_mol)
+        frag_replacement.main(settings['processed_predictions_file'],
+                                        settings['worst_fragments_file'],
+                                        settings['fragments_ids_file'],
+                                        settings['replacement_database'],
+                                        new_compouds)
 
         settings['seed_structure'] = new_compouds
+
+        # add new unique compounds into database
+        num_of_compounds = optimizer_utils.add_mols_into_db(settings['seed_structure'],
+                                                            settings['output_database'],
+                                                            gen+1)
+
+        # check if we have new compounds in new generation
+        if num_of_compounds == 0:
+            print("\nAfter generation {} aren't new compounds".format(gen))
+            sys.exit()
 
 
 def main():
     parser = argparse.ArgumentParser(description='System for designing new drugs')
     parser.add_argument('-i', '--input_config',
                         help='path to config with input settings')
-    parser.add_argument('-o', '--output_location', required=True,
-                        help='path to output location, place where all outputs are saved')
     parser.add_argument('-n', '--n_params', action='store', type=int,
                         help='specifies number of parameters to optimize')
     parser.add_argument('-d', '--define_config_structure', action='store_true', default=False,

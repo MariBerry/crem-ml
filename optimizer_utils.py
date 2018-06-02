@@ -80,24 +80,25 @@ def create_database(working_dir: str, parameter_to_optimize: List) -> str:
 
     return path_to_database
 
-def add_mols_into_db(num_of_compounds: int, input_sdf: str, database: str, gen: int) -> int:
+def add_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
     """
     Read input sdf file, convert all mols into smiles, check if they are in DB,
     and if not add them with all possible options, such as transformation rules,
     parents, number of generation and so on.
 
-    :param num_of_compounds: actual number of compounds in output database
     :param input_sdf: path to input sdf file
     :param database: path to output database
     :param gen: actual generation of optimization
     :return: number of compounds in database
     """
+
+    num_of_compounds = 0
+
     # get generator of mols in sdf file
     supplier = Chem.SDMolSupplier(input_sdf)
 
-    if gen == 0:
-        new_sdf_path = os.path.join(os.path.dirname(input_sdf), 'tmp.sdf')
-        new_sdf = Chem.SDWriter(new_sdf_path)
+    new_sdf_path = os.path.join(os.path.dirname(input_sdf), 'tmp.sdf')
+    new_sdf = Chem.SDWriter(new_sdf_path)
 
     con = lite.connect(database)
     with con:
@@ -106,35 +107,41 @@ def add_mols_into_db(num_of_compounds: int, input_sdf: str, database: str, gen: 
         cursor.execute("SELECT smi FROM optimizer_table")
         mols_in_db = [mol[0] for mol in cursor.fetchall()]
 
-        insert = []
+        insert_query = []
 
         for mol in supplier:
             smile = Chem.MolToSmiles(mol)
 
             # mol doesn't have parent and transformation prop if it is in zero gen
             if gen == 0:
-                mol.SetProp("_Name", "ID{}".format(str(num_of_compounds)))
-                mol.SetProp("ID", "ID{}".format(str(num_of_compounds)))
+                mol.SetProp("_Name", "ID_{}_{}".format(gen, num_of_compounds))
+                mol.SetProp("ID", "ID_{}_{}".format(gen, num_of_compounds))
                 mol.SetProp("parent_name", "None")
                 mol.SetProp("transformation", "None")
                 new_sdf.write(mol)
 
             if smile not in mols_in_db:
-                insert.append((mol.GetProp('ID'),
-                               smile,
-                               gen,
-                               mol.GetProp('parent_name'),
-                               mol.GetProp('transformation')))
+
+                # change indexes
+                if gen != 0:
+                    mol.SetProp("_Name", "ID_{}_{}".format(gen, num_of_compounds))
+                    mol.SetProp("ID", "ID_{}_{}".format(gen, num_of_compounds))
+                    new_sdf.write(mol)
+
+                insert_query.append((mol.GetProp("ID"),
+                                     smile,
+                                     gen,
+                                     mol.GetProp('parent_name'),
+                                     mol.GetProp('transformation')))
                 mols_in_db.append(smile)
                 num_of_compounds += 1
 
-        cursor.executemany("INSERT INTO optimizer_table (id, smi, generation, parent, transformation) VALUES (?, ?, ?, ?, ?)", insert)
+        cursor.executemany("INSERT INTO optimizer_table (id, smi, generation, parent, transformation) VALUES (?, ?, ?, ?, ?)", insert_query)
         con.commit()
 
-        if gen == 0:
-            new_sdf.close()
-            os.remove(input_sdf)
-            os.rename(new_sdf_path, input_sdf)
+        new_sdf.close()
+        os.remove(input_sdf)
+        os.rename(new_sdf_path, input_sdf)
 
     return num_of_compounds
 
