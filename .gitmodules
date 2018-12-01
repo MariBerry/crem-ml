@@ -1,3 +1,6 @@
 [submodule "spci"]
 	path = spci
 	url = https://bitbucket.imtm.cz/scm/spci/spci.git
+[submodule "crem"]
+	path = crem
+	url = https://david.svec01%40upol.cz@bitbucket.imtm.cz/scm/opti/crem.git
