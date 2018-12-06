@@ -21,7 +21,7 @@ pandas_table = NewType('Processed pandas table with id of compound and predicted
                       )
 
 
-def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> None:
+def save_output_old(input_sdf: str, out_fname: str, output_poll: pandas_table) -> None:
 
     """
     Save output dictionary to file with predicted values. Can't use rdkit
@@ -61,6 +61,48 @@ def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> No
                 pass
         in_file.seek(0)
         not_find_beg, not_find_end = True, True
+
+    out_file.write(output_string)
+    out_file.close()
+    in_file.close()
+
+def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> None:
+
+    """
+    Save output dictionary to file with predicted values. Can't use rdkit
+    save_output_poll in optimizer_utils. Somehow it changes structure of compounds
+    and during calculating fragment contribution it changes predicted values
+
+    :param in_sdf: path to input sdf file
+    :param out_fname: path to output sdf file
+    :output_poll: pandas table with selected compounds
+    """
+
+    output_string = ''
+
+    in_file = open(input_sdf, 'r')
+    out_file = open(out_fname, 'w')
+
+    this_line_is_id = False
+    found_id = 'NONE'
+
+    for line in in_file:
+        line = line.rstrip()
+
+        if this_line_is_id:
+            found_id = line
+            this_line_is_id = False
+
+        if line == '>  <ID>':
+            this_line_is_id = True
+
+        if line.rstrip() == '$$$$':
+            if found_id in output_poll.index:
+                for record, parameter in zip(output_poll.loc[found_id], output_poll.columns):
+                    output_string += '>  <pred_{}>\n {}\n\n'.format(parameter, record)
+                found_id = 'NONE'
+
+        output_string += line + '\n'
 
     out_file.write(output_string)
     out_file.close()
