@@ -13,7 +13,7 @@ import process_config
 import optimizer_utils
 import process_predictions
 import process_contributions
-import frag_replacement
+import frag_replacement_with_crem as frag_replacement
 
 
 def optimize(settings: Dict, input_config: str) -> None:
