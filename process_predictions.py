@@ -3,7 +3,6 @@
 import argparse
 import os
 
-import numpy as np
 import sqlite3 as lite
 import pandas as pd
 pd.options.mode.chained_assignment = None
