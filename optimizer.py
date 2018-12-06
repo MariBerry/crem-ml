@@ -118,10 +118,7 @@ def optimize(settings: Dict, input_config: str) -> None:
                                      [parameter['desirability'] for parameter in parameters_list_dicts],
                                      settings['number_of_selected_compounds'],
                                      )
-
         # update mols in database
-
-
         if num_of_fitted_compounds >= settings['num_output_compounds']:
             print("Optimizer reached number of fitted compounds specified in config.")
             sys.exit()

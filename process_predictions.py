@@ -78,7 +78,7 @@ def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> No
     :output_poll: pandas table with selected compounds
     """
 
-    output_string = ''
+    output_mols, mol_str = [], []
 
     in_file = open(input_sdf, 'r')
     out_file = open(out_fname, 'w')
@@ -99,12 +99,18 @@ def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> No
         if line.rstrip() == '$$$$':
             if found_id in output_poll.index:
                 for record, parameter in zip(output_poll.loc[found_id], output_poll.columns):
-                    output_string += '>  <pred_{}>\n {}\n\n'.format(parameter, record)
+                    mol_str.append('>  <pred_{}>'.format(parameter))
+                    mol_str.append(' {}'.format(record))
+                    mol_str.append('')
+                mol_str[0] = found_id
+                mol_str.append(line)
+                output_mols.append('\n'.join(mol_str))
+                mol_str = []
                 found_id = 'NONE'
+        else:
+            mol_str.append(line)
 
-        output_string += line + '\n'
-
-    out_file.write(output_string)
+    out_file.write('\n'.join(output_mols))
     out_file.close()
     in_file.close()
 
