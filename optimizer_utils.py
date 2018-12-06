@@ -222,8 +222,8 @@ def calculate_atomic_prop(input_sdf_file: str, chemaxon_path: str, properties: L
 
 def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
                                 properties: List, output_format: str,
-                                n_cores: int, copy_setup: bool=True,
-                                fragments_fname=None) -> None:
+                                n_cores: int, copy_setup: bool = True,
+                                fragments_fname=None, id_field_name: str = 'ID') -> None:
     """
     Create files with descriptors
 
@@ -234,6 +234,7 @@ def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
     :param n_cores: number of cores for computing
     :param copy_setup: if specified, copy setup file to output directory
     :param fragments_fname: if specified, use fragments ids
+    :param id_field_name: specifies name of parameter in which is id of mol saved
     """
 
     print("Descriptors calculation started. Please wait it can take some time")
@@ -270,7 +271,7 @@ def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
                       self_association_mix=False,
                       reaction_diff=False,
                       quasimix=False,
-                      id_field_name=None,
+                      id_field_name=id_field_name,
                       output_format=output_format,
                       ncores=n_cores)
 
