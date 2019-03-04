@@ -1,6 +1,7 @@
 import sys
 import argparse
 from collections import OrderedDict
+from crem.crem import mutate_mol
 
 import numpy as np
 from rdkit import Chem
@@ -39,11 +40,8 @@ def make_replacements(input_sdf, input_worst, input_ids, path_to_db):
     new_products = []
     id_mol = 0
 
-    compounds = Chem.SDMolSupplier(input_sdf, removeHs=False, sanitize=False)
+    compounds = Chem.SDMolSupplier(input_sdf, removeHs=False, sanitize=True)
     list_of_fragments = read_worst_and_ids(input_worst, input_ids)
-
-    for a in list_of_fragments:
-        print(a)
 
     for mol in compounds:
         mol_id = str(mol.GetProp('ID'))
@@ -51,7 +49,6 @@ def make_replacements(input_sdf, input_worst, input_ids, path_to_db):
             bad_mol_name, bad_frag_id = frag[0], list(frag[4])
             if mol_id == bad_mol_name:
                 protected_ids = np.delete(np.arange(mol.GetNumAtoms()), bad_frag_id)
-                from crem.crem import mutate_mol
 
                 out = mutate_mol(
                     mol,
@@ -62,51 +59,16 @@ def make_replacements(input_sdf, input_worst, input_ids, path_to_db):
                     min_inc=-2,
                     max_inc=2,
                     min_freq=0,
-                    return_rxn=False,
+                    return_rxn=True,
                     ncores=1,
                     protected_ids=list(protected_ids)
                 )
-                print(out)
-                for o in out:
-                    print(o)
-                sys.exit()
-    #     # mol.UpdatePropertyCache()
-    #     Chem.SanitizeMol(mol)
-    #     mol_hac = mol.GetNumHeavyAtoms()
-    #     mol_id = str(mol.GetProp('ID'))
-    #     mol_name = str(mol.GetProp('_Name'))
-    #
-    #     for fragment in list_of_fragments:
-    #         if fragment[0] == mol_id:       # if we have same fragment from coresponging mol
-    #
-    #             d = {}
-    #
-    #             if min_size == 0:
-    #                 h = get_Hs(mol)
-    #                 adj_ids = set()
-    #                 for atom_id in fragment[-1]:
-    #                     for nei in mol.GetAtomWithIdx(atom_id).GetNeighbors():
-    #                         adj_ids.add(nei.GetIdx())
-    #                 inter = adj_ids.intersection(h)
-    #                 for i in inter:
-    #                     d.update(replace(mol, '[H][*:1]', h[i], (i,), db_cur, min_atoms=1, max_atoms=3))
-    #
-    #             num_heavy_atoms = Chem.MolFromSmiles(fragment[2]).GetNumHeavyAtoms()
-    #             hac_ratio = num_heavy_atoms / mol_hac
-    #             if ((min_size <= num_heavy_atoms <= max_size) and (min_rel_size <= hac_ratio <= max_rel_size)) or (replace_cycles and cycle_pattern.search(core)):
-    #                 min_atoms = num_heavy_atoms + min_inc
-    #                 max_atoms = num_heavy_atoms + max_inc
-    #
-    #                 d.update(replace(mol, fragment[2], fragment[3], fragment[4], db_cur, min_atoms, max_atoms))
-    #
-    #             for new_mol in d.values():
-    #                 new_mol.SetProp('_Name', 'ID_{}'.format(id_mol))
-    #                 new_mol.SetProp('ID', 'ID_{}'.format(id_mol))
-    #                 new_mol.SetProp('parent_name', mol_name)
-    #                 new_products.append(new_mol)
-    #                 id_mol += 1
-
-    sys.exit()
+	
+                for new_smile, transformation in out:
+                    new_mol = Chem.MolFromSmiles(new_smile)
+                    new_mol.SetProp('parent_name', bad_mol_name)
+                    new_mol.SetProp('transformation', transformation)
+                    new_products.append(new_mol)
 
     return new_products
 
