@@ -109,6 +109,8 @@ def add_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
         insert_query = []
 
         for mol in supplier:
+            if not mol:
+                return 0
             smile = Chem.MolToSmiles(mol)
 
             # mol doesn't have parent and transformation prop if it is in zero gen

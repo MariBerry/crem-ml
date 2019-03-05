@@ -180,7 +180,6 @@ def optimize(settings: Dict, input_config: str) -> None:
 
         settings['seed_structure'] = new_compouds
 
-        # add new unique compounds into database
         num_of_compounds = optimizer_utils.add_mols_into_db(settings['seed_structure'],
                                                             settings['output_database'],
                                                             gen+1)

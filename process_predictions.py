@@ -106,6 +106,9 @@ def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> No
                 output_mols.append('\n'.join(mol_str))
                 mol_str = []
                 found_id = 'NONE'
+            else:
+                mol_str = []
+
         else:
             mol_str.append(line)
 

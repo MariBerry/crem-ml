@@ -63,7 +63,7 @@ def make_replacements(input_sdf, input_worst, input_ids, path_to_db):
                     ncores=1,
                     protected_ids=list(protected_ids)
                 )
-	
+
                 for new_smile, transformation in out:
                     new_mol = Chem.MolFromSmiles(new_smile)
                     new_mol.SetProp('parent_name', bad_mol_name)
