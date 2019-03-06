@@ -1,10 +1,11 @@
-working_dir: /home/david/Documents/projects/test_dp
+working_dir: /home/david/projects/school/dp/test_optimizer/test
 num_output_compounds: 100
-setup_file: /home/david/Documents/projects/dp/optimizer/setup.txt
-std_rules: /home/david/Documents/projects/dp/optimizer/std_rules.xml
-chemaxon: /home/david/opt/chemaxon/jchemsuite/bin
-seed_structure: /home/david/Documents/projects/test_dp/seed_structures.sdf
-number_of_selected_compounds: 2
+setup_file: /home/david/projects/school/dp/optimizer/setup.txt
+std_rules: /home/david/projects/school/dp/optimizer/std_rules.xml
+chemaxon: /opt/opt/chemaxon/jchemsuite/bin
+seed_structure: /home/david/projects/school/dp/test_optimizer/seed.sdf
+number_of_selected_compounds: 5
+random_compounds_selection: 0.2
 bounded_box: True
 properties_chemaxon: charge logp acc don refractivity
 properties_sirms: CHARGE LOGP HB REFRACTIVITY
@@ -13,43 +14,28 @@ smart_string: '[#6+0;!$(*=,#[!#6])]!@!=!#[*]'
 max_cuts: 3
 radius: 3
 keep_stereo: False
-replacement_database: /home/david/Documents/projects/dp/optimizer/replacement_chembl_cuts4_H.db
-number_of_worst_fragments: 1
-max_frag_size: 7
+replacement_database: /home/david/projects/school/dp/db_models/replacements-lilly-sc25.db
+number_of_worst_fragments: 3
+random_fragments_selection: 0.5
+max_frag_size: 8
 output_format: svm
-num_of_generation: 4
-n_cores: 8
+num_of_generation: 100
+n_cores: 10
 optimization_methods: pareto desirability
 store_all_files: True
 param_0:
-  name: 5HT1A
-  path: /home/david/Documents/projects/dp/optimizer/models/5HT1A
-  types_of_alg: rf svm gbm
+  name: 5ht1a
+  path: /home/david/projects/school/dp/db_models/models_2018-12-02/5ht1a/pKi/models
+  types_of_alg: rf gbm
   type_of_model: reg
-  threshold: more7
+  threshold: more8
   range: 10
-  desirability: 7:0,9:(x-7)/2,100:1
+  desirability: 8:0,9:(x-8),100:1
 param_1:
-  name: BBB
-  path: /home/david/Documents/projects/dp/optimizer/models/BBB
-  types_of_alg: rf svm gbm
-  type_of_model: class
-  threshold: more0.5
-  range: 1
-  desirability: 0.5:0,0.8:(1/0.3)*x-(5/3),100:1
-param_2:
   name: HIA
-  path: /home/david/Documents/projects/dp/optimizer/models/HIA
+  path: /home/david/projects/school/dp/db_models/models_2018-12-02/hia/HIA_label/models
   types_of_alg: rf svm gbm
   type_of_model: class
   threshold: more0.5
   range: 1
   desirability: 0.5:0,0.8:(1/0.3)*x-(5/3),100:1
-param_3:
-  name: HLM
-  path: /home/david/Documents/projects/dp/optimizer/models/HLM
-  types_of_alg: rf svm gbm
-  type_of_model: class
-  threshold: less0.5
-  range: 1
-  desirability: 0.2:1,0.5:-(1/0.3)*x+(5/3),100:0

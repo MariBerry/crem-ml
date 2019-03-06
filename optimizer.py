@@ -16,12 +16,14 @@ import process_contributions
 import frag_replacement_with_crem as frag_replacement
 
 
-def optimize(settings: Dict, input_config: str) -> None:
+def optimize(settings: Dict, input_config: str, brute_force: bool, number_generations: int) -> None:
     """
     Run all optimization tasks
 
     :param settings: dictionary with input settings
     :param input_config: path to input config file
+    :param brute_force: specifies if we want to use selections process
+    :param number_generations: specifies number of generations, use with brute_force
     """
 
     # for fitted compounds
@@ -41,6 +43,10 @@ def optimize(settings: Dict, input_config: str) -> None:
         shutil.rmtree(settings['working_dir'])
 
     for gen in range(settings['num_of_generation']):
+
+        if gen > number_generations and number_generations != 0:
+            print("Optimizer reached number of specified generations.")
+            sys.exit()
 
         # create generation dir
         generation_dir = os.path.join(settings['working_dir'], 'generation_{}'.format(gen))
@@ -117,9 +123,11 @@ def optimize(settings: Dict, input_config: str) -> None:
                                      settings['bounded_box'],
                                      [parameter['desirability'] for parameter in parameters_list_dicts],
                                      settings['number_of_selected_compounds'],
+                                     settings['random_compounds_selection'],
+                                     brute_force
                                      )
         # update mols in database
-        if num_of_fitted_compounds >= settings['num_output_compounds']:
+        if num_of_fitted_compounds >= settings['num_output_compounds'] and not brute_force:
             print("Optimizer reached number of fitted compounds specified in config.")
             sys.exit()
 
@@ -167,7 +175,9 @@ def optimize(settings: Dict, input_config: str) -> None:
                                    [parameter['range'] for parameter in parameters_list_dicts],
                                    types_of_alg_contrib,
                                    [parameter['threshold'] for parameter in parameters_list_dicts],
-                                   settings['number_of_worst_fragments'])
+                                   settings['number_of_worst_fragments'],
+                                   settings['random_fragments_selection'],
+                                   brute_force)
 
         # replace fragments
         new_compouds = os.path.join(generation_dir, '{}_gen_compounds.sdf'.format(gen))
@@ -194,6 +204,10 @@ def main():
     parser = argparse.ArgumentParser(description='System for designing new drugs')
     parser.add_argument('-i', '--input_config',
                         help='path to config with input settings')
+    parser.add_argument('-bf', '--brute_force', action='store_true', default=False,
+                        help='use all compounds and all fragments, no selections')
+    parser.add_argument('-g', '--number_generations', action='store', type=int, default=0,
+                        help='specifies number of generations, use with brute force')
     parser.add_argument('-n', '--n_params', action='store', type=int,
                         help='specifies number of parameters to optimize')
     parser.add_argument('-d', '--define_config_structure', action='store_true', default=False,
@@ -205,7 +219,8 @@ def main():
         process_config.create_config(args['output_location'], args['n_params'])
     else:
         settings = process_config.test_config(args['input_config'])
-        optimize(settings, args['input_config'])
+        optimize(settings, args['input_config'], args['brute_force'], args['number_generations'])
+
 
 if __name__ == '__main__':
     main()
