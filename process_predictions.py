@@ -265,7 +265,8 @@ def get_norm_value(x_input: float, function: List) -> float:
 
 
 def main(in_sdf, in_pred, out_database, out_fname, parameters,
-         optimization_methods, thresholds, ad, desirabilities=[], n_compounds=0):
+         optimization_methods, thresholds, ad, desirabilities=[],
+         n_compounds=0, random_compounds=0, brute_force=False):
 
     print('Processing predictions ...')
 
@@ -278,78 +279,86 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
         print('Compounds are not in ad. Calculating outside ad!')
         predictions = prepare_working_arr(in_pred, parameters, False)
 
-    # filtering
-    thresholds = parse_threshold(thresholds)
-
-    # compute distances from thresholds and use it with pareto if specified
-    distance_predictions = predictions.copy()
-    for parameter, threshold in zip(parameters, thresholds):
-        distance_predictions[parameter] = predictions[parameter].apply(compute_distance_from_threshold,
-                                                              threshold=threshold)
-
-    # find compounds which are in threshold
-    output_filtering = distance_predictions[distance_predictions.sum(axis=1) == 0]
-    output_filtering = predictions.loc[output_filtering.index].copy()
-
-    update_database(out_database, prepare_working_arr(in_pred, parameters, False), output_filtering)
-
-    for method in optimization_methods:
-        if method == 'pareto':
-
-            # use compounds which are not in threshold
-            distance_predictions = distance_predictions[distance_predictions.sum(axis=1) > 0]
-
-            input_to_pareto = prepare_points_for_pareto(distance_predictions)
-
-            # get list of indexes from pareto frontier
-            pareto = pareto_alg.simple_cull(input_to_pareto, pareto_alg.dominates_min)
-
-            for index in predictions.loc[distance_predictions.iloc[pareto].index].index:
-                selected_compounds_index.add(index)
-
-
-        elif method == 'desirability':
-
-            desirability_predictions = predictions.copy()
-
-            # use compounds which are not in threshold
-            desirability_predictions = desirability_predictions.loc[distance_predictions[distance_predictions.sum(axis=1) > 0].index]
-
-            # we have less or equal compounds in input sdf then we specified
-            # that we need from this stage, so we use all of them
-            if n_compounds >= desirability_predictions.shape[0]:
-                for index in predictions.loc[desirability_predictions.index].index:
-                    selected_compounds_index.add(index)
-            else:
-                functions = process_desirability_functions(desirabilities)
-
-                for parameter, function in zip(parameters, functions):
-                    desirability_predictions[parameter] = desirability_predictions[parameter].\
-                        apply(get_norm_value, function=function)
-
-                desirability_predictions['desirability'] = desirability_predictions.sum(axis=1)/(len(parameters))
-                desirability_predictions = desirability_predictions.sort_values(by='desirability', ascending=False)
-
-                for index in predictions.loc[desirability_predictions.head(n_compounds).index].index:
-                    selected_compounds_index.add(index)
-
-        else:
-            print('Unspecified optimization method!')
-
-    if output_filtering.shape[0] > 0:
+    # check if brute_force is selected, then no selections
+    if brute_force:
         save_output(in_sdf,
-                    os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
-                    output_filtering)
+                    out_fname,
+                    predictions)
+        return predictions.shape[0]
 
-    # save selected compounds
-    # every compounds were filtered
-    if len(selected_compounds_index) == 0:
-        selected_compounds_index = output_filtering.head(n_compounds).index
-    save_output(in_sdf,
-                out_fname,
-                predictions.loc[list(selected_compounds_index)])
+    else:
+        # filtering
+        thresholds = parse_threshold(thresholds)
 
-    return output_filtering.shape[0]
+        # compute distances from thresholds and use it with pareto if specified
+        distance_predictions = predictions.copy()
+        for parameter, threshold in zip(parameters, thresholds):
+            distance_predictions[parameter] = predictions[parameter].apply(compute_distance_from_threshold,
+                                                                  threshold=threshold)
+
+        # find compounds which are in threshold
+        output_filtering = distance_predictions[distance_predictions.sum(axis=1) == 0]
+        output_filtering = predictions.loc[output_filtering.index].copy()
+
+        update_database(out_database, prepare_working_arr(in_pred, parameters, False), output_filtering)
+
+        for method in optimization_methods:
+            if method == 'pareto':
+
+                # use compounds which are not in threshold
+                distance_predictions = distance_predictions[distance_predictions.sum(axis=1) > 0]
+
+                input_to_pareto = prepare_points_for_pareto(distance_predictions)
+
+                # get list of indexes from pareto frontier
+                pareto = pareto_alg.simple_cull(input_to_pareto, pareto_alg.dominates_min)
+
+                for index in predictions.loc[distance_predictions.iloc[pareto].index].index:
+                    selected_compounds_index.add(index)
+
+            elif method == 'desirability':
+
+                desirability_predictions = predictions.copy()
+
+                # use compounds which are not in threshold
+                desirability_predictions = desirability_predictions.loc[distance_predictions[distance_predictions.sum(axis=1) > 0].index]
+
+                # we have less or equal compounds in input sdf then we specified
+                # that we need from this stage, so we use all of them
+                if n_compounds >= desirability_predictions.shape[0]:
+                    for index in predictions.loc[desirability_predictions.index].index:
+                        selected_compounds_index.add(index)
+                else:
+                    functions = process_desirability_functions(desirabilities)
+
+                    for parameter, function in zip(parameters, functions):
+                        desirability_predictions[parameter] = desirability_predictions[parameter].\
+                            apply(get_norm_value, function=function)
+
+                    desirability_predictions['desirability'] = desirability_predictions.sum(axis=1)/(len(parameters))
+                    desirability_predictions = desirability_predictions.sort_values(by='desirability', ascending=False)
+
+                    for index in predictions.loc[desirability_predictions.head(n_compounds).index].index:
+                        selected_compounds_index.add(index)
+
+            else:
+                print('Unspecified optimization method!')
+
+        if output_filtering.shape[0] > 0:
+            save_output(in_sdf,
+                        os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
+                        output_filtering)
+
+        # save selected compounds
+        # every compounds were filtered
+        if len(selected_compounds_index) == 0:
+            selected_compounds_index = output_filtering.head(n_compounds).index
+        save_output(in_sdf,
+                    out_fname,
+                    predictions.loc[list(selected_compounds_index)])
+
+        return output_filtering.shape[0]
+
 
 if __name__ == '__main__':
 
@@ -365,9 +374,9 @@ if __name__ == '__main__':
                         help='processed predictions using specified opt. method')
     parser.add_argument('-p', '--parameters', required=True, nargs='*',
                         help='parameters for prediction')
-    parser.add_argument('-m', '--methods', required=True, nargs='*',
+    parser.add_argument('-m', '--methods', nargs='*',
                         help='method for processing predictions: pareto or desirability')
-    parser.add_argument('-t', '--thresholds', required=True, nargs='*',
+    parser.add_argument('-t', '--thresholds', nargs='*',
                         help='thresholds to be match, written in the same order as properties')
     parser.add_argument('-a', '--ad', action='store_true', default=False,
                         help='save to output file only if it is in the application domain')
@@ -375,9 +384,14 @@ if __name__ == '__main__':
                         help='if desirability method specified, need to specify desirability string')
     parser.add_argument('-n', '--n_compounds', action='store', type=int,
                         help='if desirability method specified, need to specify number of selected compounds')
+    parser.add_argument('-r', '--random_compounds', action='store', type=float,
+                        help='percent of random selected compounds')
+    parser.add_argument('-bf', '--brute_force', action='store_true', default=False,
+                        help='use all compounds, no selections')
 
     args = vars(parser.parse_args())
 
     main(args['in_sdf'], args['in_pred'], args['out_database'], args['out'],
          args['parameters'], args['methods'], args['thresholds'], args['ad'],
-         args['desirabilities'], args['n_compounds'])
+         args['desirabilities'], args['n_compounds'], args['random_compounds'],
+         args['brute_force'])

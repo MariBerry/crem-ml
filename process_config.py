@@ -17,7 +17,8 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['chemaxon', 'path_to_chemaxon_bin_folder'],
                     ['seed_structure', 'path_to_seed_structure'],
                     ['number_of_selected_compounds', 'fill only if desirability is specified'],
-                    ['bounded_box', 'True or False'],              # True
+                    ['random_compounds_selection', '0'],  # from 0 - 1, 0.2 means 20% of selected compounds are chosen randomly (floored)
+                    ['bounded_box', 'True or False'],     # True
                     ['properties_chemaxon', 'fill'],      # 'charge logp acc don refractivity'
                     ['properties_sirms', 'fill'],         # 'CHARGE LOGP HB REFRACTIVITY'
                     ['properties_calc_contrib', 'fill'],  # 'overall'
@@ -27,6 +28,7 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['keep_stereo', 'True or False'],
                     ['replacement_database', 'path_to_database_with_replacement'],
                     ['number_of_worst_fragments', 'fill'],
+                    ['random_fragments_selection', '0'],  # from 0 - 1, 0.2 means 20% of selected fragments are chosen randomly (floored)
                     ['max_frag_size', 'fill'],
                     ['output_format', 'svm'],
                     ['num_of_generation', 'fill'],
@@ -123,8 +125,16 @@ def test_config(input_config: str) -> Dict:
                     num = int(value)
                 except:
                     num = value
-                assert type(num) == type(1), "{} is not defined properly".format(key)
+                assert isinstance(num, int), "{} is not defined properly".format(key)
                 config[key] = num
+        # check settings with float numbers
+        elif (key == 'random_compounds_selection') or (key == 'random_fragments_selection'):
+            try:
+                num = float(value)
+            except:
+                num = value
+            assert isinstance(num, float), "{} is not defined properly".format(key)
+            config[key] = num
         # strip properties for chemaxon and sirms
         elif (key == 'properties_chemaxon') or (key == 'properties_sirms') \
             or (key == 'optimization_methods') or (key == 'properties_calc_contrib'):
@@ -136,11 +146,11 @@ def test_config(input_config: str) -> Dict:
             num = int(config['number_of_selected_compounds'])
         except:
             num = config['number_of_selected_compounds']
-        assert type(num) == type(1), "number_of_selected_compounds are not defined properly"
+        assert isinstance(num, int), "number_of_selected_compounds are not defined properly"
         config['number_of_selected_compounds'] = num
 
     # radius must be in list format
-    if type(config['radius']) != type([]):
+    if not isinstance(config['radius'], list):
         config['radius'] = [config['radius']]
 
     return config

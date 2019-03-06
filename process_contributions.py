@@ -120,7 +120,7 @@ def compute_normalized_value(record: pandas_series_row, predictions: pandas_tabl
             return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
 
 def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
-         types_of_alg, thresholds, n_worst):
+         types_of_alg, thresholds, n_worst, random_fragments=0, brute_force=False):
 
     print('Processing contributions ...')
 
@@ -144,18 +144,23 @@ def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
     # save to file normalized contribution
     table.reset_index()[order_cols].to_csv(out_frag_f, index=False, sep='\t')
 
-    table = table.sort_values(['Compound', 'Average'])
-
-    out_indexes = []
-
-    for id in predictions.index:
-        out_indexes.extend(table[table['Compound'] == id].head(n_worst).index)
-
     # prepare order of columns for worst fragments
     order_cols = ['Compound', 'Frag_id', 'Fragment', 'Average']
 
-    # save to file worst compounds
-    table.loc[out_indexes].reset_index()[order_cols].to_csv(out_worst_f, index=False, sep='\t')
+    if brute_force:
+        table.reset_index()[order_cols].to_csv(out_worst_f, index=False, sep='\t')
+
+    else:
+        table = table.sort_values(['Compound', 'Average']).reset_index()
+
+        out_indexes = []
+
+        for id in predictions.index:
+            out_indexes.extend(table[table['Compound'] == id].head(n_worst).index)
+
+        # save to file worst compounds
+        table.iloc[out_indexes].reset_index()[order_cols].to_csv(out_worst_f, index=False, sep='\t')
+
 
 if __name__ == '__main__':
 
@@ -179,9 +184,13 @@ if __name__ == '__main__':
                         help='thresholds to be matched')
     parser.add_argument('-n', '--n_worst', action='store', type=int,
                         help='specifies number of worst fragments')
+    parser.add_argument('-r', '--random_fragments', action='store', type=float,
+                        help='percent of random selected compounds')
+    parser.add_argument('-bf', '--brute_force', action='store_true', default=False,
+                        help='use all compounds, no selections')
 
     args = vars(parser.parse_args())
 
     main(args['in_sdf'], args['in_contrib'], args['out_frag'], args['out_worst'],
          args['parameters'], args['ranges'], args['models'], args['thresholds'],
-         args['n_worst'])
+         args['n_worst'], args['random_fragments'], args['brute_force'])
