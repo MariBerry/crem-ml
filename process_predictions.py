@@ -2,6 +2,8 @@
 
 import argparse
 import os
+import math
+import random
 
 import sqlite3 as lite
 import pandas as pd
@@ -302,6 +304,10 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
 
         update_database(out_database, prepare_working_arr(in_pred, parameters, False), output_filtering)
 
+        # set order of methods
+        if 'desirability' in optimization_methods and 'pareto' in optimization_methods and len(optimization_methods) == 2:
+            optimization_methods = ['pareto', 'desirability']
+
         for method in optimization_methods:
             if method == 'pareto':
 
@@ -318,7 +324,13 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
 
             elif method == 'desirability':
 
-                desirability_predictions = predictions.copy()
+                num_of_pareto_selected = len(selected_compounds_index)
+                if len(selected_compounds_index) >= n_compounds:
+                    desirability_predictions = predictions.loc[selected_compounds_index].copy()
+                else:
+                    desirability_predictions = predictions.loc[~predictions.index.isin(
+                        selected_compounds_index
+                    )].copy()
 
                 # use compounds which are not in threshold
                 desirability_predictions = desirability_predictions.loc[distance_predictions[distance_predictions.sum(axis=1) > 0].index]
@@ -338,7 +350,7 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                     desirability_predictions['desirability'] = desirability_predictions.sum(axis=1)/(len(parameters))
                     desirability_predictions = desirability_predictions.sort_values(by='desirability', ascending=False)
 
-                    for index in predictions.loc[desirability_predictions.head(n_compounds).index].index:
+                    for index in predictions.loc[desirability_predictions.head(n_compounds-num_of_pareto_selected).index].index:
                         selected_compounds_index.add(index)
 
             else:
@@ -349,15 +361,68 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                         os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
                         output_filtering)
 
+        if random_compounds > 0:
+            selected_indexes = random_selection(
+                optimization_methods,
+                random_compounds,
+                predictions,
+                selected_compounds_index,
+                n_compounds
+            )
+
         # save selected compounds
         # every compounds were filtered
-        if len(selected_compounds_index) == 0:
-            selected_compounds_index = output_filtering.head(n_compounds).index
+        if len(selected_indexes) == 0:
+            selected_indexes = output_filtering.head(n_compounds).index
         save_output(in_sdf,
                     out_fname,
-                    predictions.loc[list(selected_compounds_index)])
+                    predictions.loc[list(selected_indexes)])
 
         return output_filtering.shape[0]
+
+
+def random_selection(optimization_methods, random_ratio, compounds, selected_compounds, n_compounds):
+
+    n_random = math.floor(n_compounds * random_ratio)
+    if n_random == 0:
+        return selected_compounds
+
+    # desirability
+    if len(optimization_methods) == 1 and 'desirability' in optimization_methods:
+        if len(selected_compounds) == n_compounds:
+            best_compounds = set(list(selected_compounds)[:-n_random])
+            while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
+                best_compounds.add(random.choice(compounds.index))
+            return best_compounds
+        else:
+            return selected_compounds
+
+    if len(optimization_methods) == 1 and 'pareto' in optimization_methods:
+        if len(selected_compounds) == n_compounds:
+            best_compounds = set(list(selected_compounds)[:-n_random])
+            while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
+                best_compounds.add(random.choice(compounds.index))
+            return best_compounds
+        else:
+            best_compounds = set()
+            while len(best_compounds) != (n_compounds - n_random) and len(best_compounds) != len(selected_compounds):
+                best_compounds.add(random.choice(list(selected_compounds)))
+
+            while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
+                best_compounds.add(random.choice(compounds.index))
+            return best_compounds
+
+    # pareto then desirability
+    if len(optimization_methods) == 2 and 'pareto' in optimization_methods and 'desirability' in optimization_methods:
+        if len(selected_compounds) == n_compounds:
+            selected_compounds = list(selected_compounds)
+            random.shuffle(selected_compounds)
+            best_compounds = set(selected_compounds[:-n_random])
+            while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
+                best_compounds.add(random.choice(compounds.index))
+            return best_compounds
+        else:
+            return selected_compounds
 
 
 if __name__ == '__main__':
@@ -391,7 +456,7 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
 
-    main(args['in_sdf'], args['in_pred'], args['out_database'], args['out'],
+    main(args['in_sdf'], args['in_pred'], args['output_database'], args['out'],
          args['parameters'], args['methods'], args['thresholds'], args['ad'],
          args['desirabilities'], args['n_compounds'], args['random_compounds'],
          args['brute_force'])

@@ -44,31 +44,33 @@ def make_replacements(input_sdf, input_worst, input_ids, path_to_db):
     list_of_fragments = read_worst_and_ids(input_worst, input_ids)
 
     for mol in compounds:
-        mol_id = str(mol.GetProp('ID'))
-        for frag in list_of_fragments:
-            bad_mol_name, bad_frag_id = frag[0], list(frag[4])
-            if mol_id == bad_mol_name:
-                protected_ids = np.delete(np.arange(mol.GetNumAtoms()), bad_frag_id)
+        try:
+            mol_id = str(mol.GetProp('ID'))
+            for frag in list_of_fragments:
+                bad_mol_name, bad_frag_id = frag[0], list(frag[4])
+                if mol_id == bad_mol_name:
 
-                out = mutate_mol(
-                    mol,
-                    path_to_db,
-                    radius=3,
-                    min_size=0,
-                    max_size=10,
-                    min_inc=-2,
-                    max_inc=2,
-                    min_freq=0,
-                    return_rxn=True,
-                    ncores=1,
-                    protected_ids=list(protected_ids)
-                )
+                    out = mutate_mol(
+                        mol,
+                        path_to_db,
+                        radius=3,
+                        min_size=0,
+                        max_size=10,
+                        min_inc=-2,
+                        max_inc=2,
+                        min_freq=0,
+                        return_rxn=True,
+                        ncores=1,
+                        replace_ids=bad_frag_id
+                    )
 
-                for new_smile, transformation in out:
-                    new_mol = Chem.MolFromSmiles(new_smile)
-                    new_mol.SetProp('parent_name', bad_mol_name)
-                    new_mol.SetProp('transformation', transformation)
-                    new_products.append(new_mol)
+                    for new_smile, transformation in out:
+                        new_mol = Chem.MolFromSmiles(new_smile)
+                        new_mol.SetProp('parent_name', bad_mol_name)
+                        new_mol.SetProp('transformation', transformation)
+                        new_products.append(new_mol)
+        except:
+            pass
 
     return new_products
 
@@ -99,5 +101,5 @@ if __name__ == '__main__':
 
     args = vars(parser.parse_args())
 
-    main(args['input_sdf'], args['input_worst'], args['input_ids'],
-         args['input_connection_db'], args['output_product_file'])
+    main(args['in_sdf'], args['in_worst'], args['in_ids'],
+         args['in_con'], args['out_compounds'])
