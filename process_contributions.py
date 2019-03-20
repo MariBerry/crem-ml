@@ -2,6 +2,7 @@
 
 import argparse
 import math
+import random
 
 from rdkit import Chem
 import pandas as pd
@@ -120,9 +121,11 @@ def compute_normalized_value(record: pandas_series_row, predictions: pandas_tabl
             return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
 
 def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
-         types_of_alg, thresholds, n_worst, random_fragments=0, brute_force=False):
+         types_of_alg, thresholds, n_worst, random_ratio=0, brute_force=False):
 
     print('Processing contributions ...')
+
+    n_random = math.floor(n_worst * random_ratio)
 
     types_of_alg = [types.split('_') for types in types_of_alg]
 
@@ -156,7 +159,15 @@ def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
         out_indexes = []
 
         for id in predictions.index:
-            out_indexes.extend(table[table['Compound'] == id].head(n_worst).index)
+            fragment_indexes = table[table['Compound'] == id].index
+            if n_random > 0:
+                worst_fragments = fragment_indexes[:n_worst-n_random]
+                worst_fragments = set(worst_fragments)
+                while len(worst_fragments) != n_worst and len(worst_fragments) != len(fragment_indexes):
+                    worst_fragments.add(random.choice(fragment_indexes))
+                out_indexes.extend(list(worst_fragments))
+            else:
+                out_indexes.extend(fragment_indexes[:n_worst])
 
         # save to file worst compounds
         table.iloc[out_indexes].reset_index()[order_cols].to_csv(out_worst_f, index=False, sep='\t')
