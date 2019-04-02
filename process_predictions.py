@@ -137,7 +137,7 @@ def prepare_working_arr(in_pred: List, parameters: List, bounded_box: bool) -> p
             if table[table.bound_box == 1].shape[0] == 0: # no compounds in ad
                 return None
             else:
-                table.drop(table[table.bound_box==1].index, inplace=True)
+                table.drop(table[table.bound_box==0].index, inplace=True)
 
         table.drop('bound_box', axis=1, inplace=True)
         cols_to_drop = list(range(1,table.shape[1]-1))
