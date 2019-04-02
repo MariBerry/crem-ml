@@ -362,13 +362,28 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                         output_filtering)
 
         if random_compounds > 0:
-            selected_indexes = random_selection(
+            selected_indexes = not_random_selection(
                 optimization_methods,
                 random_compounds,
-                predictions,
                 selected_compounds_index,
                 n_compounds
             )
+
+        # add to processed compounds also filtered compounds
+        n_random = math.floor(n_compounds * random_compounds)
+        filtered_indexes = list(output_filtering.index)
+
+        selected_indexes.update(set(filtered_indexes))
+
+        for i in selected_compounds_index:
+            if i not in filtered_indexes:
+                try:
+                    selected_indexes.remove(i)
+                except KeyError:
+                    pass
+        selected_indexes = set(list(selected_indexes)[:n_compounds-n_random])
+        while len(selected_indexes) != n_compounds and len(selected_indexes) != predictions.shape[0]:
+            selected_indexes.add(random.choice(predictions.index))
 
         # save selected compounds
         # every compounds were filtered
@@ -381,35 +396,35 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
         return output_filtering.shape[0]
 
 
-def random_selection(optimization_methods, random_ratio, compounds, selected_compounds, n_compounds):
+def not_random_selection(optimization_methods, random_ratio, selected_compounds, n_compounds):
 
     n_random = math.floor(n_compounds * random_ratio)
     if n_random == 0:
-        return selected_compounds
+        return selected_compounds.copy()
 
     # desirability
     if len(optimization_methods) == 1 and 'desirability' in optimization_methods:
         if len(selected_compounds) == n_compounds:
             best_compounds = set(list(selected_compounds)[:-n_random])
-            while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
-                best_compounds.add(random.choice(compounds.index))
+            # while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
+            #     best_compounds.add(random.choice(compounds.index))
             return best_compounds
         else:
-            return selected_compounds
+            return selected_compounds.copy()
 
     if len(optimization_methods) == 1 and 'pareto' in optimization_methods:
         if len(selected_compounds) == n_compounds:
             best_compounds = set(list(selected_compounds)[:-n_random])
-            while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
-                best_compounds.add(random.choice(compounds.index))
+            # while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
+            #     best_compounds.add(random.choice(compounds.index))
             return best_compounds
         else:
             best_compounds = set()
             while len(best_compounds) != (n_compounds - n_random) and len(best_compounds) != len(selected_compounds):
                 best_compounds.add(random.choice(list(selected_compounds)))
 
-            while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
-                best_compounds.add(random.choice(compounds.index))
+            # while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
+            #     best_compounds.add(random.choice(compounds.index))
             return best_compounds
 
     # pareto then desirability
@@ -418,11 +433,11 @@ def random_selection(optimization_methods, random_ratio, compounds, selected_com
             selected_compounds = list(selected_compounds)
             random.shuffle(selected_compounds)
             best_compounds = set(selected_compounds[:-n_random])
-            while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
-                best_compounds.add(random.choice(compounds.index))
+            # while len(best_compounds) != n_compounds and len(best_compounds) != len(compounds):
+            #     best_compounds.add(random.choice(compounds.index))
             return best_compounds
         else:
-            return selected_compounds
+            return selected_compounds.copy()
 
 
 if __name__ == '__main__':
