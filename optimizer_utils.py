@@ -146,19 +146,22 @@ def add_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
 
     return num_of_compounds
 
-def update_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
+def count_fitted_compounds(database: str) -> int:
     """
-    Read input sdf file, convert all mols into smiles, check if they are in DB,
-    and if not add them with all possible options, such as transformation rules,
-    parents, number of generation and so on.
+    Count fitted compounds from database
 
-    :param input_sdf: path to input sdf file
     :param database: path to output database
-    :param gen: actual generation of optimization
-    :return: number of compounds in database
+    :return: number of fitted compounds in database
     """
 
-    return 0
+    con = lite.connect(database)
+    with con:
+        cursor = con.cursor()
+        cursor.execute("SELECT count(*) FROM optimizer_table where fit=1")
+        number_of_fitted_compounds = cursor.fetchone()
+
+    return number_of_fitted_compounds[0]
+
 
 def quote_str(s: str) -> str:
     """
