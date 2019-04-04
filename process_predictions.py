@@ -368,6 +368,8 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                 selected_compounds_index,
                 n_compounds
             )
+        else:
+            selected_indexes = set()
 
         # add to processed compounds also filtered compounds
         n_random = math.floor(n_compounds * random_compounds)
@@ -392,8 +394,6 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
         save_output(in_sdf,
                     out_fname,
                     predictions.loc[list(selected_indexes)])
-
-        return output_filtering.shape[0]
 
 
 def not_random_selection(optimization_methods, random_ratio, selected_compounds, n_compounds):

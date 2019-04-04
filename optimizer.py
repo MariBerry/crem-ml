@@ -26,9 +26,6 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
     :param number_generations: specifies number of generations, use with brute_force
     """
 
-    # for fitted compounds
-    num_of_fitted_compounds = 0
-
     parameters_list_dicts = [settings[parameter] for parameter in settings if "param_" in parameter]
 
     # create database
@@ -113,7 +110,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                 os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
 
         settings['processed_predictions_file'] = os.path.join(generation_dir, 'processed_predictions.sdf')
-        num_of_fitted_compounds += process_predictions.main(settings['seed_structure'],
+        process_predictions.main(settings['seed_structure'],
                                      list_of_prediction_files,
                                      settings['output_database'],
                                      settings['processed_predictions_file'],
@@ -125,7 +122,11 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                                      settings['number_of_selected_compounds'],
                                      settings['random_compounds_selection'],
                                      brute_force
-                                     )
+                                 )
+
+        # get num of fitted compounds
+        num_of_fitted_compounds = optimizer_utils.count_fitted_compounds(settings['output_database'])
+
         # update mols in database
         if num_of_fitted_compounds >= settings['num_output_compounds'] and not brute_force:
             print("Optimizer reached number of fitted compounds specified in config.")
