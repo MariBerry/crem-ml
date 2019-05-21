@@ -5,19 +5,23 @@ import matplotlib.pyplot as plt
 
 import argparse
 
-from process_predictions import get_norm_value, process_function
+from process_predictions import get_norm_value, process_desirability_functions
 
 def main_params(in_function, in_range):
-
-    fnc = process_function(in_function)
+    fnc = process_desirability_functions([in_function])[0]
     print(fnc)
     in_values = np.arange(int(in_range[0]), int(in_range[1]), 0.01)
     out_values = in_values.copy()
 
     for index, value in enumerate(out_values):
-        out_values[index] = get_norm_value(fnc, value)
-    plt.plot(in_values, out_values)
-    plt.grid()
+        out_values[index] = get_norm_value(value, fnc)
+    fig, ax = plt.subplots()
+    ax.plot(in_values, out_values)
+    ax.grid()
+    # plt.xlabel('Property')
+    # plt.ylabel('Desirability')
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     plt.show()
 
 

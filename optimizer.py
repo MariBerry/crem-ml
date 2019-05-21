@@ -210,7 +210,7 @@ def main():
     parser.add_argument('-g', '--number_generations', action='store', type=int, default=0,
                         help='specifies number of generations, use with brute force')
     parser.add_argument('-n', '--n_params', action='store', type=int,
-                        help='specifies number of parameters to optimize')
+                        help='specifies number of parameters to optimize, use with definition of config structure')
     parser.add_argument('-d', '--define_config_structure', action='store_true', default=False,
                         help='define config structure and save it to output location')
     args = vars(parser.parse_args())
