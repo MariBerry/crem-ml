@@ -239,14 +239,14 @@ def process_desirability_functions(desirabilities: List) -> List:
     if len(desirabilities) == 1:   # if we have only one function
         function = desirabilities[0].split(",")
         for index, fun in enumerate(function):
-            function[index] = [fun.split(":")[0]]  + [parse_expr(fun.split(":")[1])]
-        return function
+            function[index] = [fun.split(":")[0]] + [parse_expr(fun.split(":")[1])]
+        return [function]
     else:
         functions = []
         for fnc in desirabilities:
             fnc = fnc.split(',')
             for index, fun in enumerate(fnc):
-                fnc[index] = [fun.split(":")[0]]  + [parse_expr(fun.split(":")[1])]
+                fnc[index] = [fun.split(":")[0]] + [parse_expr(fun.split(":")[1])]
             functions.append(fnc)
         return functions
 
@@ -262,7 +262,8 @@ def get_norm_value(x_input: float, function: List) -> float:
 
     x = symbols("x")
     for index, bound in enumerate(function):
-        if round(x_input, 5) <= float(bound[0]): return float(function[index][1].subs(x, x_input))
+        if round(x_input, 5) <= float(bound[0]):
+            return float(function[index][1].subs(x, x_input))
     return 0
 
 
