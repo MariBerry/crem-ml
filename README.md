@@ -109,7 +109,8 @@ Activate conda environment:
 CReM replacement database
 -------------------------
 To use CReM-ML  you need a database with interchangeable fragments, several version can be found at
-http://www.qsar4u.com/pages/crem.php. (Currently recommended is replacements02_sa2.db.gz.)
+http://www.qsar4u.com/pages/crem.php. (Currently recommended is replacements02_sa2.db.gz.) Path to the downloaded database should be 
+specified in config.yml file (parameter "replacement_database").
 
 
 Config.yml file structure and description of input  parameters. 
@@ -169,7 +170,7 @@ TT (topological torsion); or MPNN_fingerprint. Prefix b- means binary fingerprin
   of compound. For 2D models, e.g. models built on fingerprints use False.
 + replacement_database - path to database with interchangeable fragments.
   NOTE: If invalid database is supplied, no 
-  compounds will be generated, and next steps can result in errors.
+  compounds will be generated, and next steps can result in errors (without warning).
 + number_of_worst_fragments - number of fragments with the
   worst contribution in any given compound  at each generation to consider as  candidates for replacements. Fragments will be
   selected with the following procedure: (1) for each property: normalize contribution using sigmoid-like function.
@@ -183,8 +184,7 @@ all fragments are selected based on normalized contributions.
 + max_frag_size - maximum size of both: fragment to be replaced and new fragment (heavy atom count) (this arg is used only by crem) 
 + output_format - defines output format, svm or txt for the file with descriptors (svm format is more compact). 
   Has no effect when using MPNN models.
-+ num_of_generation - maximum number of generations. Program will stop, one this is satisfied (unless stopped earlier
-+ upon another condition).
++ num_of_generation - maximum number of generations. Program will stop, one this is satisfied (unless stopped earlier upon another condition).
 + n_cores - number of cores used for calculation of descriptors and  in CReM replacement.
 + optimization_method -  optimization method to use, i.e. desirability,
 or pareto (not both). Desirability ranks compounds according to desirability function computed from values of properties to be optimised.
@@ -198,8 +198,7 @@ or pareto (not both). Desirability ranks compounds according to desirability fun
   *all* available compounds are selected.
 + store_all_files - (True/False) specifies if you want to store or delete
 intermediate files used for calculations in generations
-+ Parameter(s)
-
++ Parameter(s) ("param_0", "param_1" etc.)
 – name - name of optimized parameter (biological or physico-chemical property)
 
 – path - path to folder with models pkl files (sklearn models) or checkpoints (Chemprop model)
@@ -252,7 +251,7 @@ for more settings and detailed description, call
 
 `$ spci_descriptors --help`
 
-`spci_model -x <name of descriptors file from previous step> -f svm -y  <path to txt file with activities of molecules>` 
+`spci_model -x <name of descriptors file from previous step> -f svm -y  <path to txt file with tab-separated names and activities of molecules containig header line too>` 
 `-m <model types  from scikit-learn> -d <path to save models> -t <reg|class>`
 
 for more settings and detailed description, call
