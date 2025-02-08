@@ -303,6 +303,10 @@ def get_child_protected_atom_ids(mol, protected_parent_ids):
             protected_product_ids.append(a.GetIdx())
     return sorted(protected_product_ids)
 
+def filter_columns_by_keyword(df, keyword):
+    """Returns a DataFrame with only columns containing the specified keyword."""
+    filtered_df = df[[col for col in df.columns if keyword in col]]
+    return filtered_df
 
 def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
                                 properties: List, output_format: str,
