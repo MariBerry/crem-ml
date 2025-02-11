@@ -22,7 +22,7 @@ from spci import find_frags_auto_rdkit as find_frags
 from spci import filter_descriptors
 from spci import calc_frag_contrib as frag_contrib
 
-import chemprop_descriptors
+import chemprop_descr_and_predict
 import chemprop_predict
 import chemprop_frag_contrib
 

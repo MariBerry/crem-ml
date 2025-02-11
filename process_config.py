@@ -20,6 +20,7 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['random_compounds_selection', '0'],  # from 0 - 1, 0.2 means 20% of selected compounds are chosen randomly (floored)
                     ['descriptors_type','type of descriptors to use'],
                     ['multitask', 'True or False'],  # False
+                    ['variance_threshold', 'fill'],  # threshold for variance when calculating applicability domain
                     ['bounded_box', 'True or False'],  # True
                     ['properties_chemaxon', 'fill'],  # 'charge logp acc don refractivity'
                     ['properties_sirms', 'fill'],  # 'CHARGE LOGP HB REFRACTIVITY'

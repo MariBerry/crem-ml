@@ -80,12 +80,21 @@ def prepare_fragments_table_old(in_files: List, parameters: List, alg_types: Lis
         # remove partial columns and compute average value
         table[parameter] = table.sum(axis=1)/len(alg_types[i])
         table.drop(alg_types[i], axis=1, inplace=True)
+
         if i > 0:
             table.drop(['Compound', 'Fragment'], axis=1, inplace=True)
         tables.append(table)
-        print(table.tail())
-
-    return pd.concat(tables, axis=1, join='inner')
+        tables = pd.concat(tables, axis=1, join='inner')
+        # if ad
+        # todo
+        # if bounded_box:
+        #         if tables[tables.bound_box == 1].shape[0] == 0:  # no compounds in ad
+        #             return None
+        #         else:
+        #             tables.drop(tables[tables.bound_box == 0].index, inplace=True)
+        #
+        #     table.drop('bound_box', axis=1, inplace=True)
+    return
 
 def get_predicted_values_for_whole_compounds(in_file: str, parameters: List) -> pandas_table:
     """
