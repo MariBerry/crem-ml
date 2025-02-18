@@ -278,6 +278,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                                    types_of_alg_contrib,
                                    [parameter['threshold'] for parameter in parameters_list_dicts],
                                    settings['number_of_worst_fragments'],
+                                   settings['bounded_box'],
                                    settings['random_fragments_selection'],
                                    brute_force)
 
