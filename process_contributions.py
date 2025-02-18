@@ -17,13 +17,13 @@ pandas_table = NewType('Processed pandas table with id of compound and predicted
 pandas_series_row = NewType('One row from pandas dataframe', pd.core.series.Series)
 
 
-def  prepare_fragments_table(in_files: List, parameters: List, alg_types: List) -> pandas_table:
+def  prepare_fragments_table(in_files: List, parameters: List, alg_types: List, bounded_box: bool) -> pandas_table:
     """
     Collect all input files from fragment contributions into one big table.
 
     :param in_files: list of all contribution files
     :param parameters: list of all parameters
-    :param alg_types: list of lists of all algs used for predictions
+    :param alg_types: list of lists of all algs used for predictions; it has same number of nested lists as papameters
     :return pandas dataframe [frag_id, compound, fragment, parameters*]
     """
 
@@ -32,69 +32,22 @@ def  prepare_fragments_table(in_files: List, parameters: List, alg_types: List) 
 
         table = pd.read_table(in_file)
         table.drop( 'Contribution_type', axis=1, inplace=True) # if only 'overall' exists, we can ignore it safely
-
+        if bounded_box and "bound_box" in table.columns:  # use AD for fragments, if it is present
+            table.drop(table[table.bound_box == 0].index, inplace=True)
         table = table.pivot(index=["Compound", "Frag_id","Fragment"], columns='Model', values='Contribution_value')
         # remove partial columns and compute average value
         table[parameter]  = table[alg_type].mean(axis=1)
         table.drop(alg_type, axis=1, inplace=True)
-
+        # if ad
+        if bounded_box:
+            if table.shape[0] == 0:
+                return None
         tables.append(table)
         print(table.tail())
+
     return pd.concat(tables, axis=1, join='inner').reset_index(inplace=False) # move idx cols to become cols
 
 
-def prepare_fragments_table_old(in_files: List, parameters: List, alg_types: List) -> pandas_table:
-    """
-    Connect all input files from fragment contributions into one big table.
-
-    :param in_files: list of all contribution files
-    :param parameters: list of all parameters
-    :param alg_types: list of lists of all algs used for predictions
-    :return pandas dataframe [frag_id, compound, fragment, parameters*]
-    """
-
-    tables = []
-
-    #prepare number of lines for each parameter
-    num_lines_files = [sum(1 for line in open(in_f)) for in_f in in_files]
-
-    # without header and for every type
-    num_lines_files = [(num - 1)/len(n_types) for num, n_types in zip(num_lines_files, alg_types)]
-
-    for i, (parameter, in_file, num_lines) in enumerate(zip(parameters, in_files, num_lines_files)): # over files
-
-        for i_alg, alg in enumerate(alg_types[i]): # over types of algs
-
-            if i_alg == 0: # first type of alg
-                table = pd.read_table(in_file, nrows=num_lines)
-                columns = table.columns
-                table.drop(['Model', 'Contribution_type'], axis=1, inplace=True)
-                table.rename(columns={'Contribution_value': alg}, inplace=True)
-                table.set_index('Frag_id', inplace=True)
-            else:
-                tmp_table = pd.read_table(in_file, header=None, skiprows=int(1+(i_alg*num_lines)), nrows=num_lines)
-                tmp_table.columns = columns
-                tmp_table.rename(columns={'Contribution_value': alg}, inplace=True)
-                table[alg] = tmp_table[alg]
-
-        # remove partial columns and compute average value
-        table[parameter] = table.sum(axis=1)/len(alg_types[i])
-        table.drop(alg_types[i], axis=1, inplace=True)
-
-        if i > 0:
-            table.drop(['Compound', 'Fragment'], axis=1, inplace=True)
-        tables.append(table)
-        tables = pd.concat(tables, axis=1, join='inner')
-        # if ad
-        # todo
-        # if bounded_box:
-        #         if tables[tables.bound_box == 1].shape[0] == 0:  # no compounds in ad
-        #             return None
-        #         else:
-        #             tables.drop(tables[tables.bound_box == 0].index, inplace=True)
-        #
-        #     table.drop('bound_box', axis=1, inplace=True)
-    return
 
 def get_predicted_values_for_whole_compounds(in_file: str, parameters: List) -> pandas_table:
     """
@@ -158,7 +111,7 @@ def compute_normalized_value(record: pandas_series_row, predictions: pandas_tabl
             return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
 
 def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
-         types_of_alg, thresholds, n_worst, random_ratio=0, brute_force=False):
+         types_of_alg, thresholds, n_worst, bounded_box: bool, random_ratio=0,  brute_force=False):
     """
     :param types_of_alg: list of "_"separated alg types to be used with each optimized parameter, e.g. [rf_gbm, rf_gbm]
     """
@@ -170,7 +123,7 @@ def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
 
     thresholds = parse_threshold(thresholds)
 
-    table = prepare_fragments_table(in_contrib_f, parameters, types_of_alg)
+    table = prepare_fragments_table(in_contrib_f, parameters, types_of_alg, bounded_box)
     print(table.tail())
     predictions = get_predicted_values_for_whole_compounds(in_sdf_f, parameters)
 
