@@ -55,7 +55,7 @@ def predict_mol(m, model, sclr,i, model_type, frags=None, per_atom_fragments=Non
             mol_dict[nm + mol_frag_sep + k] = pred(rw_m, model)
     return mol_dict
 
-def main_params(in_fname, out_fname, model_path, model_type,  multitask, variance_threshold,
+def main_params(in_fname, out_fname, model_path, model_type,  multitask, variance_threshold=None,
                 frag_fname=None,
                 per_atom_fragments=False,
                 id_field_name=None,
@@ -95,19 +95,23 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
 
             df = pd.DataFrame.from_dict(mols, orient="index", columns=prop_names)
             df_lst.append(df)
-        df_lst = pd.concat(df_lst).groupby(level=0).agg(['mean', 'var'])
-        print(df_lst)
-        # Identify all variance columns
-        var_cols = [col for col in df_lst.columns if col[1] == 'var']
+        if variance_threshold is not None:
+            df_lst = pd.concat(df_lst).groupby(level=0).agg(['mean', 'var'])
+            print(df_lst)
+            # Identify all variance columns
+            var_cols = [col for col in df_lst.columns if col[1] == 'var']
 
-        # Convert all variance values to boolean based on threshold
-        for col in var_cols:
-            df_lst[col] = (df_lst[col] <= variance_threshold).astype(int)
+            # Convert all variance values to boolean based on threshold
+            for col in var_cols:
+                df_lst[col] = (df_lst[col] <= variance_threshold).astype(int)
 
-        # Flatten multi-level columns and add suffixes dynamically
-        df_lst.columns = [
-            f"{col[0]}" if col[1] == "mean" else f"{col[0]}_bound_box" for col in df_lst.columns
-        ]
+            # Flatten multi-level columns and add suffixes
+            df_lst.columns = [
+                f"{col[0]}" if col[1] == "mean" else f"{col[0]}_bound_box" for col in df_lst.columns
+            ]
+        else:
+            df_lst = pd.concat(df_lst).groupby(level=0).mean()
+            print(df_lst)
         df_lst = df_lst.reset_index()
         df_lst = df_lst.rename(columns={'index': 'Compounds'})
         if frags:
@@ -139,6 +143,7 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
                     outs_tmp["consensus"] = outs_tmp[prop_name]
 
                     outs_tmp.columns = ["bound_box" if "bound_box" in col else col for col in outs_tmp.columns]
+                    if "bound_box" not in  outs_tmp.columns: outs_tmp["bound_box"] = 1 # add fake bb for downstream compatibility
 
                     outs_list.append(outs_tmp)
                     if save_pred:
@@ -147,6 +152,8 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
         else:
             df_lst["consensus"] = df_lst[prop_names[0]]  # there should be only 1 property
             df_lst.columns = ["bound_box" if "bound_box" in col else col for col in df_lst.columns]
+            if "bound_box" not in outs_tmp.columns: outs_tmp[
+                "bound_box"] = 1  # add fake bb for downstream compatibility
 
             if save_pred:
                 df_lst.to_csv(out_fname, sep="\t", index=False)
