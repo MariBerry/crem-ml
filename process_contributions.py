@@ -90,14 +90,14 @@ def compute_normalized_value(record: pandas_series_row, predictions: pandas_tabl
 
     if threshold[0] == 'more':
         if threshold[1] <= predicted_value:
-            x = abs(x)
+            x = max(0, x) # relu to make negative sme as zero
             return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
         else:
             return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
     elif threshold[0] == 'less':
         if threshold[1] >= predicted_value:
-            x = abs(x)
-            return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
+            x = min(0, x)# to make positive same as zero
+            return -(2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1)
         else:
             return -(2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1)
     # between
