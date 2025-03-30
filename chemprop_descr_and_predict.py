@@ -67,7 +67,6 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
         '--checkpoint_dir', model_path
     ]
     args = chemprop.args.PredictArgs().parse_args(arguments)
-    model_objects = chemprop.train.load_model(args=args)
     _, __, models, scalers, ___, prop_names = chemprop.train.load_model(args=args)
     sclrs = [i[0] for i in scalers]
     # load sdf and get dict of preds (like sirms dict)

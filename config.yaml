@@ -5,22 +5,19 @@ number_of_selected_compounds: 10
 random_compounds_selection: 0
 descriptors_type:
 multitask:
-bounded_box: True
-smart_string: '[!H]!@!=!#[*]'
+bounding_box: True
+smarts_string: '[!H]!@!=!#[*]'
 max_cuts: 3
 radius: 2
-keep_stereo: False
 replacement_database: replacements02_sa2.db.gz
 number_of_worst_fragments: 10
 random_fragments_selection: 0
 min_inc: -2
 max_inc: 2
 max_frag_size: 8
-output_format: svm
-num_of_generation: 10
+num_of_generations: 10
 n_cores:
 optimization_methods: desirability
-store_all_files: True
 param_0:
   name:
   path:

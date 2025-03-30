@@ -118,14 +118,14 @@ def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> No
     out_file.close()
     in_file.close()
 
-def prepare_working_arr(in_pred: List, parameters: List, bounded_box: bool, proba_consensus:bool=True) -> pandas_table:
+def prepare_working_arr(in_pred: List, parameters: List, bounding_box: bool, proba_consensus:bool=True) -> pandas_table:
     #  todo param proba_consensus should go to config, so regression recalculation will be avoided+bettertracking of run
     """
     Reads file with predictions and process it into pandas table
 
     :param in_pred: list of paths to files with all predictions. Columns: 'Compounds', model0,model1,..,modeln,'consensus',	'bound_box'
     :param parameters: list of parameters to predict
-    :param bounded_box: if True, then return only compounds within bounded box
+    :param bounding_box: if True, then return only compounds within bounded box
     :param proba_consensus:bool=True. affects only classification (for regression will recalculate same value).
     If True - replace consensus with mean probability (flat mean over all models, except intermediate consensus models,
      i.e. svm_0, _1, rf_0, _1...).
@@ -136,7 +136,7 @@ def prepare_working_arr(in_pred: List, parameters: List, bounded_box: bool, prob
 
     for table, parameter in zip(tables, parameters):
         # if ad
-        if bounded_box:
+        if bounding_box:
             if table[table.bound_box == 1].shape[0] == 0: # no compounds in ad
                 return None
             else:
@@ -155,7 +155,7 @@ def prepare_working_arr(in_pred: List, parameters: List, bounded_box: bool, prob
     tables = pd.concat(tables, axis=1, join='inner')
 
     # if ad
-    if bounded_box:
+    if bounding_box:
         if tables.shape[0] == 0:
             return None
 
