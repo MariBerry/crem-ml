@@ -12,35 +12,27 @@ from typing import List
 
 CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['num_output_compounds', 'number of fitted compounds'],
-                    ['setup_file', 'path_to_setup_file'],
-                    ['std_rules', 'path_to_file_with_std_rules'],
-                    ['chemaxon', 'path_to_chemaxon_bin_folder'],
                     ['seed_structure', 'path_to_seed_structure'],
                     ['number_of_selected_compounds', 'fill only if desirability is specified'], # TODO  check this instruction in code logic
                     ['random_compounds_selection', '0'],  # from 0 - 1, 0.2 means 20% of selected compounds are chosen randomly (floored)
                     ['descriptors_type','type of descriptors to use'],
                     ['multitask', 'True or False'],  # False
                     ['variance_threshold', 'fill'],  # threshold for variance when calculating applicability domain
-                    ['bounded_box', 'True or False'],  # True
-                    ['properties_chemaxon', 'fill'],  # 'charge logp acc don refractivity'
-                    ['properties_sirms', 'fill'],  # 'CHARGE LOGP HB REFRACTIVITY'
-                    ['smart_string', "'[#6+0;!$(*=,#[!#6])]!@!=!#[*]'"],
+                    ['bounding_box', 'True or False'],  # True
+                    ['smarts_string', "'[#6+0;!$(*=,#[!#6])]!@!=!#[*]'"],
                     ['protected_ids', 'protected_ids'],
                     # field in seed sdf, containing atom ids that should not be touched by replacements (default name, or specify as arg)
                     ['max_cuts', 'fill'],
                     ['radius', 'fill'],
-                    ['keep_stereo', 'True or False'],
                     ['replacement_database', 'path_to_database_with_replacement'],
                     ['number_of_worst_fragments', 'fill'],
                     ['random_fragments_selection', '0'],  # from 0 - 1, 0.2 means 20% of selected fragments are chosen randomly (floored)
                     ['min_inc', 'fill'],
                     ['max_inc', 'fill'],
                     ['max_frag_size', 'fill'],
-                    ['output_format', 'svm'],
-                    ['num_of_generation', 'fill'],
+                    ['num_of_generations', 'fill'],
                     ['n_cores', 'fill'],
                     ['optimization_method', 'fill'],  # ' one of: pareto desirability'
-                    ['store_all_files', 'True or False']  # If false, it deletes all temp files, only db will be stored
                     ]
 
 PARAMETER_STRUCTURE = [['name', 'name_of_parameter'],
@@ -93,7 +85,6 @@ def test_config(input_config: str) -> Dict:
 
     # check if config file exists
     assert isfile(input_config), "{} is not a file".format(input_config)
-
     with open(input_config, 'r') as stream:
         try:
             config = yaml.load(stream, Loader=yaml.FullLoader)
@@ -103,16 +94,15 @@ def test_config(input_config: str) -> Dict:
     print(set([i for i in config.keys() if 'param' not in i]) - set([item[0] for item in CONFIG_STRUCTURE]))
     assert len( set([i for i in config.keys() if 'param' not in i]) - set([item[0] for item in CONFIG_STRUCTURE])) <=0 # todo finish this with print
 
+
     # check non parameters settings
     for key, value in config.items():
         # check directories
-        if (key == 'working_dir') or (key == 'chemaxon'):
+        if (key == 'working_dir') :
             assert exists(config[key]), "{} doesn't exists".format(key)
             config[key] = value
         # check files
-        elif (key == 'setup_file') \
-            or (key == 'seed_structure') \
-            or (key == 'std_rules') \
+        elif  (key == 'seed_structure') \
             or (key == 'replacement_database'):
                 assert isfile(config[key]), "{} doesn't exists".format(key)
                 config[key] = value
@@ -130,7 +120,7 @@ def test_config(input_config: str) -> Dict:
         elif (key == 'n_cores') or (key == 'max_cuts') \
             or (key == 'radius') or (key == 'number_of_worst_fragments') \
             or (key == 'min_inc') or (key == 'max_inc')\
-            or (key == 'max_frag_size') or (key == 'num_of_generation') \
+            or (key == 'max_frag_size') or (key == 'num_of_generations') \
             or (key == 'num_output_compounds'):
                 try:
                     num = int(value)
@@ -146,19 +136,11 @@ def test_config(input_config: str) -> Dict:
                 num = value
             assert isinstance(num, float), "{} is not defined properly".format(key)
             config[key] = num
-        # strip properties for chemaxon and sirms
-        elif (key == 'properties_chemaxon') or (key == 'properties_sirms'):
-            config[key] = value.split(" ")
 
-    assert(not('protected_ids' in config and 'std_rules' in config)) # never standardize if use prot ids, leads to index disordering
 
-    if 'sirms' not in config['descriptors_type'] and ('properties_chemaxon' in config  or 'properties_sirms' in config):
-        print( "Note, 'properties_chemaxon' and 'properties_sirms' have no effect for descriptors specified, "
-               "they are meaningful only for sirms")
-    if config ['output_format'] != "txt" and config ['descriptors_type'] == "MPNN_fingerprint":
-        print( "Note, any non-txt 'output_format' will be overridden by 'txt' when MPNN models are used.")
 
-    if config ['bounded_box']  and config ['descriptors_type'] == "MPNN_fingerprint":
+
+    if config ['bounding_box']  and config ['descriptors_type'] == "MPNN_fingerprint":
         print( "Note, bounding box is ignored when MPNN models are used.")
 
     if 'multitask' in config and  config ['multitask']  and config ['descriptors_type'] != "MPNN_fingerprint":

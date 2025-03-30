@@ -17,7 +17,7 @@ pandas_table = NewType('Processed pandas table with id of compound and predicted
 pandas_series_row = NewType('One row from pandas dataframe', pd.core.series.Series)
 
 
-def  prepare_fragments_table(in_files: List, parameters: List, alg_types: List, bounded_box: bool) -> pandas_table:
+def  prepare_fragments_table(in_files: List, parameters: List, alg_types: List, bounding_box: bool) -> pandas_table:
     """
     Collect all input files from fragment contributions into one big table.
 
@@ -32,14 +32,14 @@ def  prepare_fragments_table(in_files: List, parameters: List, alg_types: List, 
 
         table = pd.read_table(in_file)
         table.drop( 'Contribution_type', axis=1, inplace=True) # if only 'overall' exists, we can ignore it safely
-        if bounded_box and "bound_box" in table.columns:  # use AD for fragments, if it is present
+        if bounding_box and "bound_box" in table.columns:  # use AD for fragments, if it is present
             table.drop(table[table.bound_box == 0].index, inplace=True)
         table = table.pivot(index=["Compound", "Frag_id","Fragment"], columns='Model', values='Contribution_value')
         # remove partial columns and compute average value
         table[parameter]  = table[alg_type].mean(axis=1)
         table.drop(alg_type, axis=1, inplace=True)
         # if ad
-        if bounded_box:
+        if bounding_box:
             if table.shape[0] == 0:
                 return None
         tables.append(table)
@@ -111,7 +111,7 @@ def compute_normalized_value(record: pandas_series_row, predictions: pandas_tabl
             return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
 
 def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
-         types_of_alg, thresholds, n_worst, bounded_box: bool, random_ratio=0,  brute_force=False):
+         types_of_alg, thresholds, n_worst, bounding_box: bool, random_ratio=0,  brute_force=False):
     """
     :param types_of_alg: list of "_"separated alg types to be used with each optimized parameter, e.g. [rf_gbm, rf_gbm]
     """
@@ -123,7 +123,7 @@ def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
 
     thresholds = parse_threshold(thresholds)
 
-    table = prepare_fragments_table(in_contrib_f, parameters, types_of_alg, bounded_box)
+    table = prepare_fragments_table(in_contrib_f, parameters, types_of_alg, bounding_box)
     print(table.tail())
     predictions = get_predicted_values_for_whole_compounds(in_sdf_f, parameters)
 

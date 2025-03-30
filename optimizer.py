@@ -42,7 +42,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
     if os.path.exists(settings['working_dir']):
         shutil.rmtree(settings['working_dir'])
 
-    for gen in range(settings['num_of_generation']):
+    for gen in range(settings['num_of_generations']):
 
         if gen > number_generations and number_generations != 0:
             print("Optimizer reached number of specified generations.")
@@ -75,33 +75,21 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
         # start generation
         start = datetime.datetime.now()
         print(50 * '_', '\nGeneration {}: {}'.format(gen, start))
-        if "std_rules" in settings:
-            # standardization
-            settings['seed_structure'] = optimizer_utils.standardize_sdf(
-            input_sdf_file = new_sdf,
-            std_rules_path = settings['std_rules'],
-             chemaxon_path = settings[ 'chemaxon']  )
 
-        else:# only Add Hs
-            new_sdf_Hs = Chem.SDWriter(os.path.join(os.path.dirname(new_sdf), 'input_dataset_Hs.sdf'))
-            for mol in Chem.SDMolSupplier(new_sdf, removeHs=False):
-                new_sdf_Hs.write(Chem.AddHs(mol))
-            new_sdf_Hs.close()
-            settings['seed_structure'] = os.path.join(os.path.dirname(new_sdf), 'input_dataset_Hs.sdf')
+
+        #  Add Hs
+        new_sdf_Hs = Chem.SDWriter(os.path.join(os.path.dirname(new_sdf), 'input_dataset_Hs.sdf'))
+        for mol in Chem.SDMolSupplier(new_sdf, removeHs=False):
+            new_sdf_Hs.write(Chem.AddHs(mol))
+        new_sdf_Hs.close()
+        settings['seed_structure'] = os.path.join(os.path.dirname(new_sdf), 'input_dataset_Hs.sdf')
 
 
         if settings['descriptors_type'] == 'sirms':  # calculation of  sirms descriptors
-            # calc atomic properties
-            settings['seed_structure'] = optimizer_utils.calculate_atomic_prop(
-                input_sdf_file=settings['seed_structure'],
-                chemaxon_path=settings['chemaxon'],
-                properties=settings['properties_chemaxon']
-            )
+
             # calculation of sirms descriptors
             optimizer_utils.calculate_sirms_descriptors(settings['seed_structure'],
-                                        settings['setup_file'],
-                                        settings['properties_sirms'],
-                                        settings['output_format'],
+
                                         settings['n_cores']
                                         )
 
@@ -138,7 +126,6 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
             else: # non MPNN
                 optimizer_utils.calculate_fingerprints(settings['seed_structure'],
                                                        settings['descriptors_type'],
-                                                       settings['output_format'],
                                                        )
 
         # predict properties based on single x.txt for all params
@@ -146,8 +133,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
         if  settings['descriptors_type'] != "MPNN_fingerprint":
             fragments_fname = os.path.join(generation_dir, 'x.txt')
             optimizer_utils.predict_properties(parameters_list_dicts,
-                                                   fragments_fname,
-                                                   settings['output_format']
+                                                   fragments_fname
                                                    )
 
 
@@ -167,7 +153,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                                      [parameter['name'] for parameter in parameters_list_dicts],
                                      settings['optimization_method'],
                                      [parameter['threshold'] for parameter in parameters_list_dicts],
-                                     settings['bounded_box'],
+                                     settings['bounding_box'],
                                      [parameter['desirability'] for parameter in parameters_list_dicts],
                                      settings['number_of_selected_compounds'],
                                      settings['random_compounds_selection'],
@@ -188,18 +174,14 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
         error_fname_frag = os.path.join(generation_dir, 'fragments_log.log')
         optimizer_utils.find_frags_rdkit(settings['processed_predictions_file'],
                                          settings['fragments_ids_file'],
-                                         settings['smart_string'],
+                                         settings['smarts_string'],
                                          settings['max_cuts'],
                                          # settings['radius'], # todo is it safe to not to use it at all?
-                                         settings['keep_stereo'],
                                          error_fname_frag
                                          )
         if settings['descriptors_type'] == 'sirms':
             # calculate sirms descriptors of fragments
             optimizer_utils.calculate_sirms_descriptors(settings['processed_predictions_file'],
-                                        settings['setup_file'],
-                                        settings['properties_sirms'],
-                                        settings['output_format'],
                                         settings['n_cores'],
                                         fragments_ids=settings['fragments_ids_file']
                                         )
@@ -247,7 +229,6 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                 # calculation of  fingerprints  specified in config
                 optimizer_utils.calculate_fingerprints(settings['seed_structure'],
                                                    settings['descriptors_type'],
-                                                   settings['output_format'],
                                                    fragments_ids=settings['fragments_ids_file']
                                                    )
 
@@ -260,9 +241,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                                           [parameter['name'] for parameter in parameters_list_dicts],
                                           [parameter['types_of_alg'] for parameter in parameters_list_dicts],
                                           [parameter['path'] for parameter in parameters_list_dicts],
-                                          [parameter['type_of_model'] for parameter in parameters_list_dicts],
-
-                                          settings['output_format'])
+                                          [parameter['type_of_model'] for parameter in parameters_list_dicts])
 
         # find worst fragments
         settings['fragments_contrib_files'] = [os.path.join(generation_dir, 'contrib_{}.txt'.format(parameter['name']))
@@ -279,7 +258,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                                    types_of_alg_contrib,
                                    [parameter['threshold'] for parameter in parameters_list_dicts],
                                    settings['number_of_worst_fragments'],
-                                   settings['bounded_box'],
+                                   settings['bounding_box'],
                                    settings['random_fragments_selection'],
                                    brute_force)
 

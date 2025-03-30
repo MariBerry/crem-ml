@@ -15,7 +15,6 @@ pandas_table = NewType('Processed pandas table with id of compound and predicted
                       )
 
 # sys.path.insert(1, os.path.join(sys.path[0], 'spci'))
-from spci import calc_atomic_properties_chemaxon
 from spci import descriptors
 from spci import predict
 from spci import find_frags_auto_rdkit as find_frags
@@ -178,63 +177,10 @@ def quote_str(s: str) -> str:
 
     return "'%s'" % s
 
-def standardize_sdf(input_sdf_file: str, std_rules_path: str,
-                    chemaxon_path: str, copy_rules: bool=False) -> str:
-    """
-    Create file with standardized compounds
 
-    :param input_sdf_file: path to sdf file with compounds
-    :param std_rules_path: path to file with rules for standardization
-    :param chemaxon_path: path to chemaxon bin
-    :param copy_rules: if specified, copy rules to output directory
-    :return: path to new sdf file
-    """
-
-    print('Standardization is in progress...')
-
-    # copy xml-rules if specified
-    if copy_rules:
-        shutil.copyfile(
-            std_rules_path, os.path.join(os.path.dirname(input_sdf_file), std_rules_path.split("/")[-1]))
-
-    # run standardize
-    std_sdf = os.path.join(os.path.dirname(input_sdf_file), 'input_dataset_std.sdf')
-    run_params = [os.path.join(chemaxon_path, 'standardize'),
-                  '-c',
-                  quote_str(std_rules_path),  # path to rules
-                  '--ignore-error',
-                  quote_str(input_sdf_file),  # path to input file
-                  '-f',
-                  'sdf',  # type of output file
-                  '-o',
-                  quote_str(std_sdf)]  # name of output file
-    call(' '.join(run_params), shell=True)
-
-    return std_sdf
-
-def calculate_atomic_prop(input_sdf_file: str, chemaxon_path: str, properties: List) -> str:
-    """
-    Calculate atomic properties with Chemaxon, it creates file with labeled compounds
-
-    :param input_sdf_file: path to sdf file with compounds
-    :param chemaxon_path: path to chemaxon bin
-    :param properties: list of properties, e.g. ['charge', 'refractivity', 'logp', ...]
-    :return: path to new sdf file
-    """
-    print('Atomic properties calculation is in progress...')
-    lbl_sdf = os.path.join(os.path.dirname(input_sdf_file), 'input_dataset_std_lbl.sdf')
-    calc_atomic_properties_chemaxon.main_params(input_sdf_file,
-                                                lbl_sdf,
-                                                properties,
-                                                None,
-                                                os.path.join(chemaxon_path, 'cxcalc'))
-    return lbl_sdf
-
-
-# noinspection PyStatementEffect
 
 def calculate_fingerprints(input_sdf_file: str,
-                            fingerprint_type: str, output_format: str, model_path:str=None,parameter_name:str=None,
+                            fingerprint_type: str,  model_path:str=None,parameter_name:str=None,
                             fragments_ids=None, id_field_name: str = 'ID') -> None:
     """
     Create files with RDKIT fingerprints. Encoded as: ECFP4='MG2', atom pair fingerprint='AP', rdkit fingerprint: 'RDK',
@@ -242,7 +188,6 @@ def calculate_fingerprints(input_sdf_file: str,
 
     :param input_sdf_file: path to [optionally standardized] and labeled sdf file
     :param fingerprint_type: str  fingerprints to calculate e.g. 'bAP','MG2'
-    :param output_format: svm
     :param model_path: provide this path iff calculating MPNN fingerprint
     :param parameter_name: provide this name (of target property corresponding to model) iff  calculating MPNN fingerprint
     :param fragments_ids: path to file with frag_ids; if specified, use fragments ids
@@ -285,7 +230,7 @@ def calculate_fingerprints(input_sdf_file: str,
                           frag_fname=fragments_ids,
                           per_atom_fragments=False,
                           id_field_name=id_field_name,
-                          output_format=output_format,
+                          output_format="svm",
                           get_fp=fingerprint_type)
 
 
@@ -308,30 +253,20 @@ def filter_columns_by_keyword(df, keyword):
     filtered_df = df[[col for col in df.columns if keyword in col]]
     return filtered_df
 
-def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
-                                properties: List, output_format: str,
-                                n_cores: int, copy_setup: bool = True,
+def calculate_sirms_descriptors(input_sdf_file: str,
+                                n_cores: int,
                                 fragments_ids=None, id_field_name: str = 'ID') -> None:
     """
     Create files with descriptors
 
     :param input_sdf_file: path to standardized and labeled sdf file
-    :param setup_file: path to file with setup for calculation of sirms descriptors
-    :param properties: list of properties, e.g. ['CHARGE', 'REFRACTIVITY', 'LOGP', ...]
-    :param output_format: svm
     :param n_cores: number of cores for computing
-    :param copy_setup: if specified, copy setup file to output directory
     :param fragments_ids: path to frag_ids file; if specified, use fragments ids
     :param id_field_name: specifies name of parameter in which is id of mol saved
     """
 
     print("Descriptors calculation started. Please wait it can take some time")
 
-    # copy setup file for sirms into generation dir
-    if copy_setup:
-        shutil.copyfile(setup_file,
-                        os.path.join(os.path.dirname(input_sdf_file), os.path.basename(setup_file))
-                        )
 
     # define output files
     if fragments_ids is not None:
@@ -341,7 +276,7 @@ def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
 
     sirms.main_params(in_fname=input_sdf_file,    # input
                       out_fname=x_fname,        # output
-                      opt_diff=properties,
+                      opt_diff="elm",
                       min_num_atoms=2,
                       max_num_atoms=4,
                       min_num_components=1,
@@ -360,21 +295,20 @@ def calculate_sirms_descriptors(input_sdf_file: str, setup_file: str,
                       reaction_diff=False,
                       quasimix=False,
                       id_field_name=id_field_name,
-                      output_format=output_format,
+                      output_format="svm",
                       ncores=n_cores)
 
     # filter sirms descriptors
     filter_descriptors.main_params(in_fname=x_fname,
                                    out_fname=x_fname,
-                                   file_format=output_format)
+                                   file_format="svm")
 
-def predict_properties(parameters: List, descriptors_fname: str, output_format: str, multitask:bool=False) -> None:
+def predict_properties(parameters: List, descriptors_fname: str, multitask:bool=False) -> None:
     """
     Creates summarized file with predictions
 
     :parama parameters: list of dicts with parameters
     :parama fragmens_fname: path to file with calculated descriptors
-    :parama output_format: svm/txt/...
     """
 
     for parameter in parameters:
@@ -392,7 +326,7 @@ def predict_properties(parameters: List, descriptors_fname: str, output_format: 
                              )
         else:
             predict.main_params(x_fname=descriptors_fname,
-                            input_format=output_format,
+                            input_format="svm",
                             out_fname=output_file_name,
                             model_names=parameter['types_of_alg'],
                             model_dir=parameter['path'],
@@ -403,7 +337,7 @@ def predict_properties(parameters: List, descriptors_fname: str, output_format: 
 
 def find_frags_rdkit(input_sdf_file: str, fragment_ids_file: str,
                      smarts_string: str, max_cuts: int,
-                     keep_stereo: bool, error_fname: str,
+                      error_fname: str,
                      verbose: bool=False) -> None:
     """
     Creates file with fragments from sdf file
@@ -412,7 +346,6 @@ def find_frags_rdkit(input_sdf_file: str, fragment_ids_file: str,
     :param fragment_ids_file: name of output file with fragment ids
     :param smarts_string: ******NOT SURE******
     :param max_cuts: ******NOT SURE******
-    :param keep_stereo: ******NOT SURE******
     :param: error_fname: path to log file from this function
     :param verbose: false default
     """
@@ -423,13 +356,13 @@ def find_frags_rdkit(input_sdf_file: str, fragment_ids_file: str,
                                 query=smarts_string,
                                 max_cuts=max_cuts,
                                 radius = [0], # todo is it safe to hardcode this arg?
-                                keep_stereo = keep_stereo,
                                 verbose=verbose,
+                           keep_stereo=False,
                                 error_fname=error_fname)
 
 def calc_frag_contrib(x_fname: str, parameters: List, types_of_alg: List,
                       models_dir: List, models_type: List,
-                     in_format: str, multitask: bool=False) -> None:
+                     multitask: bool=False) -> None:
     """
     Calculate contributions of fragments. All records in list must be specified
     in same order.
@@ -439,7 +372,6 @@ def calc_frag_contrib(x_fname: str, parameters: List, types_of_alg: List,
     :param types_of_alg: list with types of alg used for predictions, e.g. [['rf', 'svm'], ['rf']]
     :param models_dir: list of paths to models directories
     :param models_type: list of types of models, e.g. ['reg', 'class']
-    :param: in_format: ******NOT SURE****** 'svm'
     """
 
     for parameter, type_of_alg, model_dir, model_type in zip(parameters, types_of_alg, models_dir, models_type):
@@ -467,7 +399,7 @@ def calc_frag_contrib(x_fname: str, parameters: List, types_of_alg: List,
                                  activity_file=None,
                                  verbose=False,
                                  save_pred=False,
-                                 input_format=in_format,
+                                 input_format="svm",
                                  long_format=True,
                                  save_frag_ids=True)
 
