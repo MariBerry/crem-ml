@@ -253,7 +253,7 @@ def get_norm_value(x_input: float, function: List) -> float:
     return 0
 
 def main(in_sdf, in_pred, out_database, out_fname, parameters,
-         optimization_method, thresholds, ad, desirabilities=[],
+         optimization_method, thresholds, ad, desirabilities=None,
          n_compounds=0, random_compounds=0, brute_force=False):
     """
     Logic of algorithm:
@@ -413,7 +413,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--desirabilities', nargs='*',
                         help='if desirability method specified, need to specify desirability string')
     parser.add_argument('-n', '--n_compounds', action='store', type=int,
-                        help='if desirability method specified, need to specify number of selected compounds')
+                        help='number of selected compounds')
     parser.add_argument('-r', '--random_compounds', action='store', type=float,
                         help='percent of random selected compounds')
     parser.add_argument('-bf', '--brute_force', action='store_true', default=False,

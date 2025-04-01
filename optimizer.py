@@ -146,6 +146,10 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                 os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
         print(settings["seed_structure"])
         settings['processed_predictions_file'] = os.path.join(generation_dir, 'processed_predictions.sdf')
+        if settings["optimization_method"] == "desirability":
+            desirabilities  = [parameter['desirability'] for parameter in parameters_list_dicts]
+        else:
+            desirabilities = None
         process_predictions.main(settings['seed_structure'],
                                      list_of_prediction_files,
                                      settings['output_database'],
@@ -154,7 +158,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
                                      settings['optimization_method'],
                                      [parameter['threshold'] for parameter in parameters_list_dicts],
                                      settings['bounding_box'],
-                                     [parameter['desirability'] for parameter in parameters_list_dicts],
+                                     desirabilities,
                                      settings['number_of_selected_compounds'],
                                      settings['random_compounds_selection'],
                                      brute_force
