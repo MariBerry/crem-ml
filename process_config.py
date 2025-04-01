@@ -13,7 +13,7 @@ from typing import List
 CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['num_output_compounds', 'number of fitted compounds'],
                     ['seed_structure', 'path_to_seed_structure'],
-                    ['number_of_selected_compounds', 'fill only if desirability is specified'], # TODO  check this instruction in code logic
+                    ['number_of_selected_compounds', 'number of compounds selected for optimization in one generation '],
                     ['random_compounds_selection', '0'],  # from 0 - 1, 0.2 means 20% of selected compounds are chosen randomly (floored)
                     ['descriptors_type','type of descriptors to use'],
                     ['multitask', 'True or False'],  # False
