@@ -344,8 +344,8 @@ def find_frags_rdkit(input_sdf_file: str, fragment_ids_file: str,
 
     :param input_sdf_file: input file with compounds
     :param fragment_ids_file: name of output file with fragment ids
-    :param smarts_string: ******NOT SURE******
-    :param max_cuts: ******NOT SURE******
+    :param smarts_string:
+    :param max_cuts:
     :param: error_fname: path to log file from this function
     :param verbose: false default
     """
