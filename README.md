@@ -144,7 +144,7 @@ or pareto (not both). Desirability ranks compounds according to desirability fun
 + smarts_string - SMARTS pattern  which defines how
   to fragment compounds.  (bonds matched by SMARTS will be broken - for more details, see RDKit.Chem.rdMMPA docs).
   Recommended to use "[!#1]!@!=!#[!#1]" (breaks any single bond between 2 non-hydrogen atoms)  or "[!#1]!@!=!#[*]" 
-  (any single bond, except H-H).   NOTE:  if you decide to modify recommended string - keep in mind, that breaking bonds with hydrogen atom  
+  (any single bond, except H-H). Needs to be in quotes because of special characters.  NOTE:  if you decide to modify recommended string - keep in mind, that breaking bonds with hydrogen atom  
   while using fingerprints that ignore hydrogen (AtomPairs) will highly likely 
  lead to these hydrogens being selected as worst fragments, because of 0 contributions.
 + max_cuts - number of maximum cuts used in fragmentation procedure (see RDKit.Chem.rdMMPA docs). Recommended is 1...3 cuts.

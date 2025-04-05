@@ -97,8 +97,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
             # calculation of  fingerprints
 
             if settings['descriptors_type'] == "MPNN_fingerprint":
-                if "variance_threshold" not in settings: settings["variance_threshold"] = None
-                if "multitask" not in settings or not settings["multitask"]: # default multitask is False
+                if not settings["multitask"]: # default multitask is False
                     for i, dict in enumerate(parameters_list_dicts): # over parameters
                         # set path with mpnn model;
                         mpnn_path = parameters_list_dicts[i]['path']
