@@ -45,7 +45,7 @@ PARAMETER_STRUCTURE = [['name', 'name_of_parameter'],
 
 def create_config(output_dir: str, num_of_parameters: int, file_name: str='config.yaml') -> None:
     """
-    Create empty file for input settings for optimizer; set useful defaults
+    Create config file for input settings for optimizer; set useful defaults
 
     :param output_dir: path to output dir
     :param num_of_parameters: number of parameters to optimize
@@ -60,8 +60,6 @@ def create_config(output_dir: str, num_of_parameters: int, file_name: str='confi
 
     # working dir
     CONFIG_STRUCTURE[working_dir_index][1] = os.path.abspath(output_dir)
-    # num param
-    CONFIG_STRUCTURE[num_parameters_index][1] = num_of_parameters
 
     conf_file = os.path.join(output_dir, file_name)
     with open(conf_file, 'w') as config:

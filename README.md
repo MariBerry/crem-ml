@@ -83,24 +83,29 @@ All other packages can be installed using *conda* or *pip*.
 
 How To Use
 -----------
-
-Main script is called *optimizer.py*.
-Create a config file. For quick-start template *config.yml* with default parameters can be used
-User needs to enter only task-specific parameters, i.e. working directory, model paths, in case of using desirability for selection -  desirability strings
-(instructons how to create a string - see *Config file structure and description of input  parameters.*) etc.
-Example configs for  several use-cases are provided as well in 'examples/' folder, together with all the input data to run those cases.
-
-`example_crem_ml.ipynb` contains an example of optimization and analysis of results.
-
 Activate conda environment:
 
 `$ conda activate crem_ml_env_py370`
 
- and run:
-
 `$ cd ~/path_to_crem-ml/`
 
+Main script is called *optimizer.py*.
+Create a config file. For quick-start create  *config.yml* with default parameters by running.
 
+`$ python optimizer.py -d -n -o `
+-d is config creation mode, -n is the  number of optimization targets, 1,2,3 etc. - o is (optional) working directory.
+More info:
+
+`$ python optimizer.py --help`
+
+In created file, the user needs to fill only task-specific parameters, i.e. seed molecules sdf,
+model paths; in case of using desirability method -  desirability strings
+(instructions how to create a string - see *Config file structure and description of input  parameters.*).
+Example configs for  several use-cases are provided as well in 'examples/' folder, together with all the input data to run those cases.
+
+`example_crem_ml.ipynb` contains an example of optimization and analysis of results.
+
+Then run optimizer in optimization mode
 
 `$ python optimizer.py -i ~/path_to_config/config.yaml`
 
