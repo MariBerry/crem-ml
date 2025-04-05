@@ -20,7 +20,6 @@ max_frag_size: 7
 num_of_generations: 5
 n_cores: 10
 optimization_method: desirability
-store_all_files: True
 param_0:
   name: 231
   path:  examples/models/231_spci_sklearn_atompairs_fp/

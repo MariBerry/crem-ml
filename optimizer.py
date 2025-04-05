@@ -305,20 +305,20 @@ def main():
                         help='path to config with input settings')
     parser.add_argument('-bf', '--brute_force', action='store_true', default=False,
                         help='use all compounds and all fragments, no selections')
-    parser.add_argument('-g', '--number_generations', action='store', type=int, default=0,
-                        help='specifies number of generations, use with brute force') # todo  why we need it here?
     parser.add_argument('-n', '--n_params', action='store', type=int,
-                        help='specifies number of parameters to optimize, use with definition of config structure')
-    parser.add_argument('-d', '--define_config_structure', action='store_true', default=False,
+                        help='specifies number of parameters to optimize, use when running in the  config creation mode')
+    parser.add_argument('-d', '--create_config_structure', action='store_true', default=False,
                         help='define config structure and save it to output location')
+    parser.add_argument('-o', '--output_location', default=os.getcwd(),
+                        help='output location. Specify when running in the  config creation mode. default: current dir')
     args = vars(parser.parse_args())
 
-    if args['define_config_structure']:
+    if args['create_config_structure']:
         assert args['n_params'], "You have to specify number of parameters with -n or --n_params option"
         process_config.create_config(args['output_location'], args['n_params'])
     else:
         settings = process_config.test_config(args['input_config'])
-        optimize(settings, args['input_config'], args['brute_force'], args['number_generations'])
+        optimize(settings, args['input_config'], args['brute_force'])
 
 
 if __name__ == '__main__':
