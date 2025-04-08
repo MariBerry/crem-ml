@@ -19,14 +19,13 @@ import process_contributions
 import frag_replacement_with_crem as frag_replacement
 
 
-def optimize(settings: Dict, input_config: str, brute_force: bool, number_generations: int) -> None:
+def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
     """
     Run all optimization tasks
 
     :param settings: dictionary with input settings
     :param input_config: path to input config file
     :param brute_force: specifies if we want to use selections process
-    :param number_generations: specifies number of generations, use with brute_force
     """
 
     parameters_list_dicts = [settings[parameter] for parameter in settings if "param_" in parameter]
@@ -43,10 +42,6 @@ def optimize(settings: Dict, input_config: str, brute_force: bool, number_genera
         shutil.rmtree(settings['working_dir'])
 
     for gen in range(settings['num_of_generations']):
-
-        if gen > number_generations and number_generations != 0:
-            print("Optimizer reached number of specified generations.")
-            sys.exit()
 
         # create generation dir
         generation_dir = os.path.join(settings['working_dir'], 'generation_{}'.format(gen))
