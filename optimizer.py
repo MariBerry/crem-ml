@@ -196,7 +196,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
 
                         chemprop_frag_contrib.main_params(x_fname =settings['seed_structure'],
                                                             out_fname = os.path.join(generation_dir,'contrib_{}.txt'.format(param_name)),
-                                                            model_path = mpnn_path,
+                                                            model_dir = mpnn_path,
                                                             model_type = parameters_list_dicts[i]['type_of_model'],
                                                             frag_fname = settings['fragments_ids_file'],
                                                             per_atom_fragments = False,
