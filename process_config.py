@@ -186,7 +186,7 @@ def test_config(input_config: str) -> Dict:
 
 
     # warnings
-    if config ['bounding_box']  and config ['descriptors_type'] == "MPNN_fingerprint":
+    if 'bounding_box' in config  and config ['descriptors_type'] == "MPNN_fingerprint":
         print( "Note, bounding box is ignored when MPNN models are used.")
     if 'multitask' in config and  config ['multitask']  and config ['descriptors_type'] != "MPNN_fingerprint":
         print( "Note, parameter 'multitask' is ignored  when models other than MPNN are used.")
