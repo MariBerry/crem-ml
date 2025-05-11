@@ -12,16 +12,16 @@ from typing import List
 
 CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['seed_structure', 'path_to_seed_structure'],
-                    ['num_of_generations', 'number of generations'],
-                    ['num_output_compounds', 'number of  compounds to generate'],
+                    ['num_of_generations', 'number_of_generations'],
+                    ['num_output_compounds', 'number_of_compounds_to_generate'],
                     ['n_cores', '1'],
                     ['number_of_selected_compounds', 'number of compounds selected for optimization in one generation '],
                     ['random_compounds_selection', '0'],  # from 0 - 1, 0.2 means 20% of selected compounds are chosen randomly (floored)
                     ['optimization_method', 'pareto or desirability'],  # ' one of: pareto desirability'
-                    ['smarts_string', "'[#6+0;!$(*=,#[!#6])]!@!=!#[*]'"],
+                    ['smarts_string', "'[!#1]!@!=!#[!#1]'"],
                     ['max_cuts', '1'],
                     ['protected_ids', 'None'], # field in seed sdf, containing atom ids that should not be touched by replacements (default name, or specify as ar
-                    ['replacement_database', 'path_to_database_with_replacement'],
+                    ['replacement_database', 'path_to_database_with_interchangeble_fragments'],
                     ['number_of_worst_fragments', ''],
                     ['random_fragments_selection', '0'], # from 0 - 1, 0.2 means 20% of selected fragments are chosen randomly (floored)
                     ['max_frag_size', '7'],
@@ -30,7 +30,7 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['radius', '2'],
                     ['descriptors_type','type of descriptors to use'],
                     ['bounding_box', 'True'],
-                    ['multitask', 'True or False'],  # False
+                    ['multitask', 'True or False'],
                     ['variance_threshold', 'None'],  # threshold for variance when calculating applicability domain
                     ]
 
@@ -103,7 +103,7 @@ def test_config(input_config: str) -> Dict:
         config['random_compounds_selection'] = 0
     if 'smarts_string' not in config:
         config[
-            'smarts_string'] = "'[#6+0;!$(*=,#[!#6])]!@!=!#[*]'"  # needs to be in quotes because of special characters
+            'smarts_string'] = "[!#1]!@!=!#[!#1]"  # needs to be in quotes because of special characters
     if 'max_cuts' not in config:
         config['max_cuts'] = 1
     if 'protected_ids' not in config:
@@ -118,8 +118,8 @@ def test_config(input_config: str) -> Dict:
         config['max_inc'] = 2
     if 'radius' not in config:
         config['radius'] = 2
-    if 'boundnig_box' not in config:
-        config['boundnig_box'] = True
+    if 'bounding_box' not in config:
+        config['bounding_box'] = True
     if 'multitask' not in config:
         config['multitask'] = False
     if 'variance_threshold' not in config:
@@ -190,6 +190,5 @@ def test_config(input_config: str) -> Dict:
         print( "Note, bounding box is ignored when MPNN models are used.")
     if 'multitask' in config and  config ['multitask']  and config ['descriptors_type'] != "MPNN_fingerprint":
         print( "Note, parameter 'multitask' is ignored  when models other than MPNN are used.")
-
 
     return config

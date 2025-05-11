@@ -6,6 +6,7 @@ from matplotlib.offsetbox import AnchoredText
 from rdkit import Chem
 from torch import Tensor
 import torch
+from torch.nn.functional import sigmoid
 import numpy as np
 from  sirms.files import LoadFragments
 from collections import OrderedDict
@@ -68,6 +69,7 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
     ]
     args = chemprop.args.PredictArgs().parse_args(arguments)
     _, __, models, scalers, ___, prop_names = chemprop.train.load_model(args=args)
+
     sclrs = [i[0] for i in scalers]
     # load sdf and get dict of preds (like sirms dict)
     input_file_extension = in_fname.strip().split(".")[-1].lower()
@@ -151,7 +153,7 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
         else:
             df_lst["consensus"] = df_lst[prop_names[0]]  # there should be only 1 property
             df_lst.columns = ["bound_box" if "bound_box" in col else col for col in df_lst.columns]
-            if "bound_box" not in outs_tmp.columns: outs_tmp[
+            if "bound_box" not in df_lst.columns: df_lst[
                 "bound_box"] = 1  # add fake bb for downstream compatibility
 
             if save_pred:
