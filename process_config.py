@@ -29,7 +29,7 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['max_inc', '2'],
                     ['radius', '2'],
                     ['descriptors_type','type of descriptors to use'],
-                    ['bounding_box', 'True'],
+                    ['bounding_box', 'True or False'],
                     ['multitask', 'True or False'],
                     ['variance_threshold', 'None'],  # threshold for variance when calculating applicability domain
                     ]
@@ -93,7 +93,6 @@ def test_config(input_config: str) -> Dict:
         except yaml.YAMLError as exc:
             print(exc)
 
-    print(set([i for i in config.keys() if 'param' not in i]) - set([item[0] for item in CONFIG_STRUCTURE]))
     assert len( set([i for i in config.keys() if 'param' not in i]) - set([item[0] for item in CONFIG_STRUCTURE])) <=0 # todo finish this with print
 
     # set defaults for  settings absent in config

@@ -40,7 +40,6 @@ def main_params(x_fname:str,
     :param save_frag_ids: save frag id in each molecule. it will return additional column named Frag_ID
     """
     if not multitask:
-        print(x_fname)
         frag_preds = chemprop_descr_and_predict.main_params(in_fname=x_fname,
                                                        out_fname=out_fname,
                                                        model_path=model_dir,
@@ -88,13 +87,11 @@ def main_params(x_fname:str,
 
             out_name_param = optimizer_utils.retrieve_out_fname_param(out_fname)
 
-            print(out_name_param)
 
             # rename copounds->compound (spci consuistent)
             frag_preds.columns = ['Compound']+ frag_preds.columns[1:].tolist()
             # retrieve property
             prop_name = frag_preds.columns[[i not in ["Compound","Fragment", "Frag_id"] for i in frag_preds.columns]][0]
-            print(prop_name)
             # add mol_pred column (pandas)
             compound_preds = frag_preds.loc[pd.isnull(frag_preds.Fragment), ["Compound", "consensus"]]
 
@@ -106,11 +103,9 @@ def main_params(x_fname:str,
             frag_preds['Model'] = "MPNN"  # for format compatibility
             # remove molecules , leave only frags
             frag_preds = frag_preds.loc[~pd.isnull(frag_preds.Fragment),:]
-            print(out_fname, "old_o_f_n")
             #  write (pandas)
             # todo fix _activity - itss hardcode
             out_fname = os.path.join(os.path.dirname(out_fname),re.sub(out_name_param ,re.sub("activity_","",prop_name) , os.path.basename(out_fname))) # replace old param name with actually to be written
-            print(out_fname, "new_o_f_n")
             frag_preds.to_csv(out_fname, sep="\t", index=False)
 
         return frag_preds_list

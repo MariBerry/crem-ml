@@ -138,7 +138,6 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
         for parameter in parameters_list_dicts:
             list_of_prediction_files.append(
                 os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
-        print(settings["seed_structure"])
         settings['processed_predictions_file'] = os.path.join(generation_dir, 'processed_predictions.sdf')
         if settings["optimization_method"] == "desirability":
             desirabilities  = [parameter['desirability'] for parameter in parameters_list_dicts]
@@ -266,10 +265,8 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
             settings['protected_ids'] = None
         if 'min_inc' not in settings:
             settings['min_inc'] = -2
-            print("no_min", settings['min_inc'])
         if 'max_inc' not in settings:
             settings['max_inc'] = 2
-        # print(settings['protected_ids'])
         frag_replacement.main(settings['processed_predictions_file'],
                                         settings['worst_fragments_file'],
                                         settings['fragments_ids_file'],

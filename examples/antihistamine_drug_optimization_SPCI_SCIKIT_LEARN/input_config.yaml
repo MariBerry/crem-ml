@@ -17,7 +17,7 @@ random_fragments_selection: 0
 min_inc: -2
 max_inc: 2
 max_frag_size: 7
-num_of_generations: 5
+num_of_generations: 3
 n_cores: 10
 optimization_method: desirability
 param_0:

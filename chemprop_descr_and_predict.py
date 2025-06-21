@@ -69,7 +69,12 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
     ]
     args = chemprop.args.PredictArgs().parse_args(arguments)
     _, __, models, scalers, ___, prop_names = chemprop.train.load_model(args=args)
-
+    # prop_names =  [
+    #     "chembl_279",
+    # #     "chembl_1936",
+    #     "chembl_1913",
+    # #     "chembl_2041"
+    # ]
     sclrs = [i[0] for i in scalers]
     # load sdf and get dict of preds (like sirms dict)
     input_file_extension = in_fname.strip().split(".")[-1].lower()
@@ -92,13 +97,11 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
                     mols.update(res)
                 #construct df and save to file
 
-            print(mols)
 
             df = pd.DataFrame.from_dict(mols, orient="index", columns=prop_names)
             df_lst.append(df)
         if variance_threshold is not None:
             df_lst = pd.concat(df_lst).groupby(level=0).agg(['mean', 'var'])
-            print(df_lst)
             # Identify all variance columns
             var_cols = [col for col in df_lst.columns if col[1] == 'var']
 
@@ -112,7 +115,6 @@ def main_params(in_fname, out_fname, model_path, model_type,  multitask, varianc
             ]
         else:
             df_lst = pd.concat(df_lst).groupby(level=0).mean()
-            print(df_lst)
         df_lst = df_lst.reset_index()
         df_lst = df_lst.rename(columns={'index': 'Compounds'})
         if frags:

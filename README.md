@@ -174,7 +174,7 @@ all fragments are selected based on normalized contributions.
 + max_inc - (optional)  maximum increase in size of fragment while making replacements using CReM module. The default is +2 heavy atoms.
   This means that new fragment can have 2 atoms more than the one replaced. 
 + radius - how distant a context should be considered while making replacements using CReM module. REcommended: 1..3.
-+ descriptors_type - 'sirms' or one of: MG2, bMG2 (Morgan radius 2), AP, bAP (atom-pair), RDK, bRDK (2-4 atoms RDK fingerprint)
++ descriptors_type - MG2, bMG2 (Morgan radius 2), AP, bAP (atom-pair), RDK, bRDK (2-4 atoms RDK fingerprint)
 TT (topological torsion); or MPNN_fingerprint. Prefix b- means binary fingerprint of length 2048.
   NOTES: All models  - except MPNN - should have been built (using  descriptors specified here) on molecules with explicit hydrogens 
   (because at descriptor calculation 
