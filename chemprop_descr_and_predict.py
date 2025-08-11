@@ -6,7 +6,7 @@ from matplotlib.offsetbox import AnchoredText
 from rdkit import Chem
 from torch import Tensor
 import torch
-from torch.nn.functional import sigmoid
+from torch import sigmoid
 import numpy as np
 from  sirms.files import LoadFragments
 from collections import OrderedDict
@@ -27,7 +27,7 @@ def predict_mol(m, model, sclr,i, model_type, frags=None, per_atom_fragments=Non
                 pred = sclr.inverse_transform(pred)
 
             elif model_type == "class":
-                pred = np.asarray(sigmoid(pred))
+                pred = np.asarray(pred)
 
         return np.array(pred).squeeze(0)
 

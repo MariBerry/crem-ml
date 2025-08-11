@@ -254,7 +254,7 @@ def get_norm_value(x_input: float, function: List) -> float:
 
 def main(in_sdf, in_pred, out_database, out_fname, parameters,
          optimization_method, thresholds, ad, desirabilities=None,
-         n_compounds=0, random_compounds=0, brute_force=False):
+         n_compounds=0, random_compounds=0, additive_agg = True, brute_force=False):
     """
     Logic of algorithm:
     1. if brute force - save all compounds to out_fname.
@@ -351,7 +351,11 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                     desirability_predictions[parameter] = desirability_predictions[parameter].\
                         apply(get_norm_value, function=function)
 
-                desirability_predictions['desirability'] = desirability_predictions.sum(axis=1)/(len(parameters))
+                if additive_agg: # additive
+                    desirability_predictions['desirability'] = desirability_predictions.sum(axis=1)/(len(parameters))
+                else: # multiplicative
+                    desirability_predictions['desirability'] = desirability_predictions.product(axis=1)
+
                 desirability_predictions = desirability_predictions.sort_values(by='desirability', ascending=False)
                 selected_compounds_index = predictions.loc[desirability_predictions.head(n_compounds).index].index
                 if random_compounds > 0:

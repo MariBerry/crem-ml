@@ -12,8 +12,8 @@ from typing import List
 
 CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['seed_structure', 'path_to_seed_structure'],
-                    ['num_of_generations', 'number_of_generations'],
-                    ['num_output_compounds', 'number_of_compounds_to_generate'],
+                    ['num_of_generations', '10'],
+                    ['num_output_compounds', '100'],
                     ['n_cores', '1'],
                     ['number_of_selected_compounds', 'number of compounds selected for optimization in one generation '],
                     ['random_compounds_selection', '0'],  # from 0 - 1, 0.2 means 20% of selected compounds are chosen randomly (floored)
@@ -29,8 +29,8 @@ CONFIG_STRUCTURE = [['working_dir', 'path_to_output_dir'],
                     ['max_inc', '2'],
                     ['radius', '2'],
                     ['descriptors_type','type of descriptors to use'],
-                    ['bounding_box', 'True or False'],
-                    ['multitask', 'True or False'],
+                    ['bounding_box', 'True'],
+                    ['multitask', 'False'],
                     ['variance_threshold', 'None'],  # threshold for variance when calculating applicability domain
                     ]
 
@@ -96,6 +96,10 @@ def test_config(input_config: str) -> Dict:
     assert len( set([i for i in config.keys() if 'param' not in i]) - set([item[0] for item in CONFIG_STRUCTURE])) <=0 # todo finish this with print
 
     # set defaults for  settings absent in config
+    if 'num_of_generations' not in config:
+        config['num_of_generations'] = 10
+    if 'num_output_compounds' not in config:
+        config['num_output_compounds'] = 100
     if 'n_cores' not in config:
         config['n_cores'] = 1
     if 'random_compounds_selection' not in config:
@@ -179,7 +183,7 @@ def test_config(input_config: str) -> Dict:
             config[key] = num
         # assure we use only compatible descriptors
         elif (key == 'descriptors_type'):
-            acceptable_descr = ['sirms', 'MG2', 'AP', 'RDK', 'TT', 'bMG2', 'bAP', 'bRDK', 'MPNN_fingerprint']
+            acceptable_descr = [ 'MG2', 'AP', 'RDK', 'TT', 'bMG2', 'bAP', 'bRDK', 'MPNN_fingerprint']
             assert (value in acceptable_descr), "{} is not defined properly".format(key)
 
 
