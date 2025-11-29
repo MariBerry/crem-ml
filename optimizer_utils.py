@@ -22,7 +22,6 @@ from spci import filter_descriptors
 from spci import calc_frag_contrib as frag_contrib
 
 import chemprop_descr_and_predict
-import chemprop_predict
 import chemprop_frag_contrib
 
 # sys.path.insert(1, os.path.join(sys.path[0], 'spci/sirms'))

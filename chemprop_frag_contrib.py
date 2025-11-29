@@ -8,7 +8,6 @@ import torch
 import numpy as np
 from  sirms.files import LoadFragments
 from collections import OrderedDict
-import chemprop_predict
 import typing
 import re
 import os
