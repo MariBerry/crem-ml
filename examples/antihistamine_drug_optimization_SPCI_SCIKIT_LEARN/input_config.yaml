@@ -17,9 +17,9 @@ random_fragments_selection: 0
 min_inc: -2
 max_inc: 2
 max_frag_size: 7
-num_of_generations: 5
+num_of_generations: 3
 n_cores: 10
-optimization_method: desirability
+optimization_method: pareto
 param_0:
   name: 231
   path:  examples/models/231_spci_sklearn_atompairs_fp/

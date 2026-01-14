@@ -9,7 +9,6 @@ from process_predictions import get_norm_value, process_desirability_functions
 
 def main_params(in_function, in_range):
     fnc = process_desirability_functions([in_function])[0]
-    print(fnc)
     in_values = np.arange(int(in_range[0]), int(in_range[1]), 0.01)
     out_values = in_values.copy()
 

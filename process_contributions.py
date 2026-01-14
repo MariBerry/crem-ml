@@ -43,7 +43,6 @@ def  prepare_fragments_table(in_files: List, parameters: List, alg_types: List, 
             if table.shape[0] == 0:
                 return None
         tables.append(table)
-        print(table.tail())
 
     return pd.concat(tables, axis=1, join='inner').reset_index(inplace=False) # move idx cols to become cols
 
@@ -90,14 +89,14 @@ def compute_normalized_value(record: pandas_series_row, predictions: pandas_tabl
 
     if threshold[0] == 'more':
         if threshold[1] <= predicted_value:
-            x = max(0, x) # relu to make negative sme as zero
+            x = abs(x)
             return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
         else:
             return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
     elif threshold[0] == 'less':
         if threshold[1] >= predicted_value:
-            x = min(0, x)# to make positive same as zero
-            return -(2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1)
+            x = abs(x)
+            return 2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1
         else:
             return -(2 * ((1 / (1 + math.exp((7 / range) * - x))) - 1) + 1)
     # between
@@ -124,15 +123,12 @@ def main(in_sdf_f, in_contrib_f, out_frag_f, out_worst_f, parameters, ranges,
     thresholds = parse_threshold(thresholds)
 
     table = prepare_fragments_table(in_contrib_f, parameters, types_of_alg, bounding_box)
-    print(table.tail())
     predictions = get_predicted_values_for_whole_compounds(in_sdf_f, parameters)
 
     for parameter, threshold, rng in zip(parameters, thresholds, ranges):
-        print(table.loc[:,parameter])
         table.loc[:,parameter] = table.apply(compute_normalized_value, axis=1, predictions=predictions, parameter=parameter, threshold=threshold, range=rng)
     cols_to_ave = range(table.shape[1] - len(parameters),table.shape[1])
     table['Average'] = table.iloc[:,cols_to_ave].sum(axis=1) / len(parameters)
-    print("after ave",table.tail())
     # prepare order of columns for fragment norm output
     order_cols = ['Compound', 'Frag_id', 'Fragment']
     order_cols.extend(parameters)

@@ -105,18 +105,18 @@ Example configs for  several use-cases are provided as well in 'examples/' folde
 
 `example_crem_ml.ipynb` contains an example of optimization and analysis of results.
 
+To use CReM-ML  you need a database with interchangeable fragments, several version can be found at
+http://www.qsar4u.com/pages/crem.php. (Currently recommended is replacements02_sa2.db.gz.). Also, available at DropBox. 
+Path to the downloaded database should be subsequently specified in config.yml file (parameter "replacement_database").
+
+`$ curl -L https://www.dropbox.com/s/4r48ohopechsd59/replacements02_sa2.db.gz?dl=1 | gunzip > replacements02_sa2.db`
+
 Then run optimizer in optimization mode
 
 `$ python optimizer.py -i ~/path_to_config/config.yaml`
 
-CReM replacement database
--------------------------
-To use CReM-ML  you need a database with interchangeable fragments, several version can be found at
-http://www.qsar4u.com/pages/crem.php. (Currently recommended is replacements02_sa2.db.gz.) Path to the downloaded database should be 
-specified in config.yml file (parameter "replacement_database").
 
-
-Config.yml file structure and description of input  parameters. 
+Config.yml file structure and description of input  parameters (to create  *config.yml* with default values see above).  
 ----------------------------------------------------------
 
 + working_dir - path to directory where all outputs are going to be stored
@@ -174,14 +174,14 @@ all fragments are selected based on normalized contributions.
 + max_inc - (optional)  maximum increase in size of fragment while making replacements using CReM module. The default is +2 heavy atoms.
   This means that new fragment can have 2 atoms more than the one replaced. 
 + radius - how distant a context should be considered while making replacements using CReM module. REcommended: 1..3.
-+ descriptors_type - 'sirms' or one of: MG2, bMG2 (Morgan radius 2), AP, bAP (atom-pair), RDK, bRDK (2-4 atoms RDK fingerprint)
++ descriptors_type - MG2, bMG2 (Morgan radius 2), AP, bAP (atom-pair), RDK, bRDK (2-4 atoms RDK fingerprint)
 TT (topological torsion); or MPNN_fingerprint. Prefix b- means binary fingerprint of length 2048.
   NOTES: All models  - except MPNN - should have been built (using  descriptors specified here) on molecules with explicit hydrogens 
   (because at descriptor calculation 
   and CREM replacement stages explicit hydrogens are  "on" by default). For MPNN fingerprints it doesn't matter if the models
   were built with or without explicit hydrogens, they are ignored during fingerprint calculation).
-+ bounding_box - (True/False) use or not  only compounds which are inside bounding box applicability
-  domain. Currently, has no effect for MPNN models. TODO: add MPNN too
++ bounding_box - default True. Determines, whether to  use or not  only compounds which are inside bounding box applicability
+  domain. Currently, has no effect for MPNN models. 
   
 + multitask -  (optional) (True/False). Default:False. intended to be used with MPNN  models. Otherwise - has no effect. 
   

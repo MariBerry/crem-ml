@@ -254,7 +254,7 @@ def get_norm_value(x_input: float, function: List) -> float:
 
 def main(in_sdf, in_pred, out_database, out_fname, parameters,
          optimization_method, thresholds, ad, desirabilities=None,
-         n_compounds=0, random_compounds=0, brute_force=False):
+         n_compounds=0, random_compounds=0, additive_agg = True, brute_force=False):
     """
     Logic of algorithm:
     1. if brute force - save all compounds to out_fname.
@@ -324,7 +324,6 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
         # that we need in config, so we use all of them, regardless of optimization method:
         if n_compounds >= sum(ids_not_in_thr):
             selected_compounds_index = list(predictions.loc[distance_predictions[ids_not_in_thr].index].index)
-            print(selected_compounds_index, "selected all compds")
 
         elif optimization_method == 'pareto':
                 # use compounds which are not in threshold
@@ -343,7 +342,6 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                 #    change some of False points to True - new order frontier (by selecting "~" , i.e. False old True points remain
                     pareto[~pareto] = pareto_new
                 selected_compounds_index = list(predictions.loc[distance_predictions.iloc[pareto].index].index)
-                print(len(selected_compounds_index), "best pareto")
 
         elif optimization_method == 'desirability':
                 # use compounds which are not in threshold
@@ -353,32 +351,30 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                     desirability_predictions[parameter] = desirability_predictions[parameter].\
                         apply(get_norm_value, function=function)
 
-                desirability_predictions['desirability'] = desirability_predictions.sum(axis=1)/(len(parameters))
+                if additive_agg: # additive
+                    desirability_predictions['desirability'] = desirability_predictions.sum(axis=1)/(len(parameters))
+                else: # multiplicative
+                    desirability_predictions['desirability'] = desirability_predictions.product(axis=1)
+
                 desirability_predictions = desirability_predictions.sort_values(by='desirability', ascending=False)
                 selected_compounds_index = predictions.loc[desirability_predictions.head(n_compounds).index].index
-                print(selected_compounds_index, "best des")
                 if random_compounds > 0:
 
                     selected_compounds_index = list(selected_compounds_index[:-n_random])
-                    print(selected_compounds_index, "best des -random (check the 'head')")
         else:
                 print('Unspecified optimization method!')
 
 
         if random_compounds > 0:
-            print(n_compounds)
             if len(selected_compounds_index) < n_compounds:
 
                 predictions_diff = predictions.loc[predictions.index.difference(selected_compounds_index)]
 
 
                 predictions_diff = predictions_diff.loc[predictions_diff.index.difference(output_filtering.index)]
-                print(predictions_diff, "pred_diff")
                 if predictions_diff.shape[0]>0: # any data available
-                    print(n_random, "n_random")
                     selected_compounds_index.extend(
                         predictions_diff.sample( n=min(n_random,len(predictions_diff))).index ) # take min because may be not enough
-                    print( selected_compounds_index)
 
         # save selected compounds
 

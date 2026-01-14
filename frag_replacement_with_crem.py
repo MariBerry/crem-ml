@@ -122,7 +122,6 @@ def make_replacements_mp(input_sdf, input_worst, input_ids, path_to_db, radius, 
     new_products = []
     compounds = Chem.SDMolSupplier(input_sdf, removeHs=False, sanitize=True)
     df_of_fragments = read_worst_and_ids(input_worst, input_ids)
-    print(df_of_fragments)
     for res in p.imap_unordered(partial(make_replacements, prot_ids=prot_ids, df_of_fragments=df_of_fragments, path_to_db=path_to_db,
                         radius=radius, min_inc=min_inc, max_inc = max_inc, max_size=max_size), compounds):
         new_products.extend(res)

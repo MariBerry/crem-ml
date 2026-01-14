@@ -1,0 +1,28 @@
+Fold 0
+Model 0 best validation mcc = 0.754476 on epoch 46
+Model 0 test mcc = 0.711351
+Ensemble test mcc = 0.711351
+Fold 1
+Model 0 best validation mcc = 0.735847 on epoch 40
+Model 0 test mcc = 0.790889
+Ensemble test mcc = 0.790889
+Fold 2
+Model 0 best validation mcc = 0.722463 on epoch 43
+Model 0 test mcc = 0.739664
+Ensemble test mcc = 0.739664
+Fold 3
+Model 0 best validation mcc = 0.746798 on epoch 37
+Model 0 test mcc = 0.766008
+Ensemble test mcc = 0.766008
+Fold 4
+Model 0 best validation mcc = 0.757690 on epoch 31
+Model 0 test mcc = 0.757234
+Ensemble test mcc = 0.757234
+5-fold cross validation
+	Seed 0 ==> test mcc = 0.711351
+	Seed 1 ==> test mcc = 0.790889
+	Seed 2 ==> test mcc = 0.739664
+	Seed 3 ==> test mcc = 0.766008
+	Seed 4 ==> test mcc = 0.757234
+Overall test mcc = 0.753029 +/- 0.026590
+Elapsed time = 1:16:28
