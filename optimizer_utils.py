@@ -133,7 +133,7 @@ def add_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
                     new_sdf.write(mol)
 
                 insert_query.append((mol.GetProp("ID"),
-                                     smile,
+                                     Chem.CanonSmiles(smile),
                                      gen,
                                      mol.GetProp('parent_name'),
                                      mol.GetProp('transformation')))
