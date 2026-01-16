@@ -224,10 +224,10 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
                                                       num_frag_id=True)
             else:
                 # calculation of  fingerprints  specified in config
-                optimizer_utils.calculate_fingerprints(settings['seed_structure'],
-                                                   settings['descriptors_type'],
-                                                   fragments_ids=settings['fragments_ids_file']
-                                                   )
+                optimizer_utils.calculate_fingerprints(settings['processed_predictions_file'],
+                                                       settings['descriptors_type'],
+                                                       fragments_ids=settings['fragments_ids_file']
+                                                       )
 
 
         # calculate fragments contributions
