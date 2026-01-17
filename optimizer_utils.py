@@ -102,8 +102,8 @@ def add_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
     new_sdf_path = os.path.join(os.path.dirname(input_sdf), 'tmp.sdf')
     new_sdf = Chem.SDWriter(new_sdf_path)
 
-    con = lite.connect(database)
-    with con:
+    with lite.connect(database) as con:
+
         cursor = con.cursor()
 
         cursor.execute("SELECT smi FROM optimizer_table")
