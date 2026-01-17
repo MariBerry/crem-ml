@@ -41,7 +41,7 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
     if os.path.exists(settings['working_dir']):
         shutil.rmtree(settings['working_dir'])
 
-    for gen in range(settings['num_of_generations']):
+    for gen in range(settings['num_of_generations'] + 1):  # +1 to predict properties at the last iteration
 
         # create generation dir
         generation_dir = os.path.join(settings['working_dir'], 'generation_{}'.format(gen))
@@ -163,6 +163,11 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
         # update mols in database
         if num_of_fitted_compounds >= settings['num_output_compounds'] and not brute_force:
             print("Optimizer reached number of fitted compounds specified in config.")
+            sys.exit()
+
+        # exit of this iteration is the last one
+        if gen >= settings['num_of_generations']:
+            print(f"Optimizer reached the maximum number of iterations: {settings['num_of_generations']}.")
             sys.exit()
 
         # find fragments
