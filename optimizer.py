@@ -32,7 +32,9 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
 
     # create database
     settings['output_database'] = optimizer_utils.create_database(
-        settings['working_dir'], [parameter['name'] for parameter in parameters_list_dicts])
+        settings['working_dir'],
+        [parameter['name'] for parameter in parameters_list_dicts]
+    )
 
     shutil.copyfile(input_config, os.path.join(settings['working_dir'], 'config.yaml'))
 
@@ -54,9 +56,11 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
 
         if gen == 0:
             # add new unique compounds into database
-            num_of_compounds = optimizer_utils.add_mols_into_db(settings['seed_structure'],
-                                                                settings['output_database'],
-                                                                gen)
+            num_of_compounds = optimizer_utils.add_mols_into_db(
+                settings['seed_structure'],
+                settings['output_database'],
+                gen
+            )
 
             # check if we have new compounds in new generation
             if num_of_compounds == 0:
@@ -71,7 +75,6 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
         start = datetime.datetime.now()
         print(50 * '_', '\nGeneration {}: {}'.format(gen, start))
 
-
         #  Add Hs
         new_sdf_Hs = Chem.SDWriter(os.path.join(os.path.dirname(new_sdf), 'input_dataset_Hs.sdf'))
         for mol in Chem.SDMolSupplier(new_sdf, removeHs=False):
@@ -83,10 +86,10 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
         if settings['descriptors_type'] == 'sirms':  # calculation of  sirms descriptors
 
             # calculation of sirms descriptors
-            optimizer_utils.calculate_sirms_descriptors(settings['seed_structure'],
-
-                                        settings['n_cores']
-                                        )
+            optimizer_utils.calculate_sirms_descriptors(
+                settings['seed_structure'],
+                settings['n_cores']
+            )
 
         else:
             # calculation of  fingerprints
@@ -97,41 +100,44 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
                         # set path with mpnn model;
                         mpnn_path = parameters_list_dicts[i]['path']
                         param_name = parameters_list_dicts[i]['name']
-                        chemprop_descr_and_predict.main_params(in_fname=settings['seed_structure'],
-                                                         out_fname=os.path.join(generation_dir,
-                                                         'predictions_{}.txt'.format(param_name)),
-                                                         model_path=mpnn_path,
-                                                         model_type=parameters_list_dicts[i]['type_of_model'],
-                                                         variance_threshold=settings['variance_threshold'],
-                                                         multitask=False)
+                        chemprop_descr_and_predict.main_params(
+                            in_fname=settings['seed_structure'],
+                            out_fname=os.path.join(generation_dir,
+                                                   'predictions_{}.txt'.format(param_name)),
+                            model_path=mpnn_path,
+                            model_type=parameters_list_dicts[i]['type_of_model'],
+                            variance_threshold=settings['variance_threshold'],
+                            multitask=False
+                        )
 
                 else: #multitask
                     mpnn_path = parameters_list_dicts[0]['path'] #  they allhave same path
                     param_name = parameters_list_dicts[0]['name'] # just to init with , it will be changed for each param
-                    chemprop_descr_and_predict.main_params(in_fname=settings['seed_structure'],
-                                                         out_fname=os.path.join(generation_dir,
-                                                         'predictions_{}.txt'.format(param_name)),
-                                                         model_path=mpnn_path,
-                                                         model_type=parameters_list_dicts[0]['type_of_model'],
-                                                         variance_threshold=settings['variance_threshold'],
-                                                         multitask=True)
+                    chemprop_descr_and_predict.main_params(
+                        in_fname=settings['seed_structure'],
+                        out_fname=os.path.join(generation_dir,
+                                               'predictions_{}.txt'.format(param_name)),
+                        model_path=mpnn_path,
+                        model_type=parameters_list_dicts[0]['type_of_model'],
+                        variance_threshold=settings['variance_threshold'],
+                        multitask=True
+                    )
 
 
             else: # non MPNN
-                optimizer_utils.calculate_fingerprints(settings['seed_structure'],
-                                                       settings['descriptors_type'],
-                                                       )
+                optimizer_utils.calculate_fingerprints(
+                    settings['seed_structure'],
+                    settings['descriptors_type'],
+                )
 
         # predict properties based on single x.txt for all params
 
         if  settings['descriptors_type'] != "MPNN_fingerprint":
             fragments_fname = os.path.join(generation_dir, 'x.txt')
-            optimizer_utils.predict_properties(parameters_list_dicts,
-                                                   fragments_fname
-                                                   )
-
-
-
+            optimizer_utils.predict_properties(
+                parameters_list_dicts,
+                fragments_fname
+            )
 
         # process predictions
         list_of_prediction_files = []   # prepare list of file paths with predictions
@@ -143,19 +149,20 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
             desirabilities  = [parameter['desirability'] for parameter in parameters_list_dicts]
         else:
             desirabilities = None
-        process_predictions.main(settings['seed_structure'],
-                                     list_of_prediction_files,
-                                     settings['output_database'],
-                                     settings['processed_predictions_file'],
-                                     [parameter['name'] for parameter in parameters_list_dicts],
-                                     settings['optimization_method'],
-                                     [parameter['threshold'] for parameter in parameters_list_dicts],
-                                     settings['bounding_box'],
-                                     desirabilities,
-                                     settings['number_of_selected_compounds'],
-                                     settings['random_compounds_selection'],
-                                     brute_force
-                                 )
+        process_predictions.main(
+            settings['seed_structure'],
+            list_of_prediction_files,
+            settings['output_database'],
+            settings['processed_predictions_file'],
+            [parameter['name'] for parameter in parameters_list_dicts],
+            settings['optimization_method'],
+            [parameter['threshold'] for parameter in parameters_list_dicts],
+            settings['bounding_box'],
+            desirabilities,
+            settings['number_of_selected_compounds'],
+            settings['random_compounds_selection'],
+            brute_force
+        )
 
         # get num of fitted compounds
         num_of_fitted_compounds = optimizer_utils.count_fitted_compounds(settings['output_database'])
@@ -174,19 +181,22 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
 
         settings['fragments_ids_file'] = os.path.join(generation_dir, 'fragments_ids.txt')
         error_fname_frag = os.path.join(generation_dir, 'fragments_log.log')
-        optimizer_utils.find_frags_rdkit(settings['processed_predictions_file'],
-                                         settings['fragments_ids_file'],
-                                         settings['smarts_string'],
-                                         settings['max_cuts'],
-                                         # settings['radius'], # todo is it safe to not to use it at all?
-                                         error_fname_frag
-                                         )
+        optimizer_utils.find_frags_rdkit(
+            settings['processed_predictions_file'],
+            settings['fragments_ids_file'],
+            settings['smarts_string'],
+            settings['max_cuts'],
+            # settings['radius'], # todo is it safe to not to use it at all?
+            error_fname_frag
+        )
+
         if settings['descriptors_type'] == 'sirms':
             # calculate sirms descriptors of fragments
-            optimizer_utils.calculate_sirms_descriptors(settings['processed_predictions_file'],
-                                        settings['n_cores'],
-                                        fragments_ids=settings['fragments_ids_file']
-                                        )
+            optimizer_utils.calculate_sirms_descriptors(
+                settings['processed_predictions_file'],
+                settings['n_cores'],
+                fragments_ids=settings['fragments_ids_file']
+            )
 
         else:
             if settings['descriptors_type'] == 'MPNN_fingerprint':
@@ -198,71 +208,80 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
 
                         # calc contrib  for different parameters
 
-                        chemprop_frag_contrib.main_params(x_fname =settings['seed_structure'],
-                                                            out_fname = os.path.join(generation_dir,'contrib_{}.txt'.format(param_name)),
-                                                            model_dir = mpnn_path,
-                                                            model_type = parameters_list_dicts[i]['type_of_model'],
-                                                            frag_fname = settings['fragments_ids_file'],
-                                                            per_atom_fragments = False,
-                                                            id_field_name = None,
-                                                            multitask = False,
-                                                            variance_threshold = settings['variance_threshold'],
-                                                            save_pred = True,
-                                                            num_frag_id = True)
+                        chemprop_frag_contrib.main_params(
+                            x_fname =settings['seed_structure'],   # TODO: PP, settings['processed_predictions_file'] instead of seed_structures
+                            out_fname=os.path.join(generation_dir,
+                                                   'contrib_{}.txt'.format(param_name)),
+                            model_dir=mpnn_path,
+                            model_type=parameters_list_dicts[i]['type_of_model'],
+                            frag_fname=settings['fragments_ids_file'],
+                            per_atom_fragments=False,
+                            id_field_name=None,
+                            multitask=False,
+                            variance_threshold=settings['variance_threshold'],
+                            save_pred=True,
+                            num_frag_id=True
+                        )
 
                 else: # multitask
                     mpnn_path = parameters_list_dicts[0]['path']
                     param_name = str(parameters_list_dicts[0]['name'])
 
                     # calc contrib using name of 1st parameter;  for all paramas  (because model predicts all properties at once)
-                    chemprop_frag_contrib.main_params(x_fname=settings['seed_structure'],
-                                                      out_fname=os.path.join(generation_dir,
-                                                                             'contrib_{}.txt'.format(param_name)),
-                                                      model_dir=mpnn_path,
-                                                      model_type=parameters_list_dicts[0]['type_of_model'],
-                                                      frag_fname=settings['fragments_ids_file'],
-                                                      per_atom_fragments=False,
-                                                      id_field_name=None,
-                                                      multitask=True,
-                                                      variance_threshold=settings['variance_threshold'],
-                                                      save_pred=True,
-                                                      num_frag_id=True)
+                    chemprop_frag_contrib.main_params(
+                        x_fname=settings['seed_structure'],   # TODO: PP, settings['processed_predictions_file'] instead of seed_structures
+                        out_fname=os.path.join(generation_dir,
+                                               'contrib_{}.txt'.format(param_name)),
+                        model_dir=mpnn_path,
+                        model_type=parameters_list_dicts[0]['type_of_model'],
+                        frag_fname=settings['fragments_ids_file'],
+                        per_atom_fragments=False,
+                        id_field_name=None,
+                        multitask=True,
+                        variance_threshold=settings['variance_threshold'],
+                        save_pred=True,
+                        num_frag_id=True
+                    )
             else:
                 # calculation of  fingerprints  specified in config
-                optimizer_utils.calculate_fingerprints(settings['processed_predictions_file'],
-                                                       settings['descriptors_type'],
-                                                       fragments_ids=settings['fragments_ids_file']
-                                                       )
-
+                optimizer_utils.calculate_fingerprints(
+                    settings['processed_predictions_file'],
+                    settings['descriptors_type'],
+                    fragments_ids=settings['fragments_ids_file']
+                )
 
         # calculate fragments contributions
 
         if  settings['descriptors_type'] != 'MPNN_fingerprint': # calculate contribs using SINGLE new_x.txt for each param
             new_fragments_fname = os.path.join(generation_dir, 'new_x.txt')
-            optimizer_utils.calc_frag_contrib(new_fragments_fname,
-                                          [parameter['name'] for parameter in parameters_list_dicts],
-                                          [parameter['types_of_alg'] for parameter in parameters_list_dicts],
-                                          [parameter['path'] for parameter in parameters_list_dicts],
-                                          [parameter['type_of_model'] for parameter in parameters_list_dicts])
+            optimizer_utils.calc_frag_contrib(
+                new_fragments_fname,
+                [parameter['name'] for parameter in parameters_list_dicts],
+                [parameter['types_of_alg'] for parameter in parameters_list_dicts],
+                [parameter['path'] for parameter in parameters_list_dicts],
+                [parameter['type_of_model'] for parameter in parameters_list_dicts]
+            )
 
         # find worst fragments
         settings['fragments_contrib_files'] = [os.path.join(generation_dir, 'contrib_{}.txt'.format(parameter['name']))
-                                               for parameter in parameters_list_dicts]
+                                                  for parameter in parameters_list_dicts]
         settings['worst_fragments_file'] = os.path.join(generation_dir, 'worst_fragments.txt')
         types_of_alg_contrib = ['_'.join(parameter['types_of_alg']) for parameter in parameters_list_dicts]
 
-        process_contributions.main(settings['processed_predictions_file'],
-                                   settings['fragments_contrib_files'],
-                                   os.path.join(generation_dir, 'fragment_contrib_norm.txt'),
-                                   settings['worst_fragments_file'],
-                                   [parameter['name'] for parameter in parameters_list_dicts],
-                                   [parameter['range'] for parameter in parameters_list_dicts],
-                                   types_of_alg_contrib,
-                                   [parameter['threshold'] for parameter in parameters_list_dicts],
-                                   settings['number_of_worst_fragments'],
-                                   settings['bounding_box'],
-                                   settings['random_fragments_selection'],
-                                   brute_force)
+        process_contributions.main(
+            settings['processed_predictions_file'],
+            settings['fragments_contrib_files'],
+            os.path.join(generation_dir, 'fragment_contrib_norm.txt'),
+            settings['worst_fragments_file'],
+            [parameter['name'] for parameter in parameters_list_dicts],
+            [parameter['range'] for parameter in parameters_list_dicts],
+            types_of_alg_contrib,
+            [parameter['threshold'] for parameter in parameters_list_dicts],
+            settings['number_of_worst_fragments'],
+            settings['bounding_box'],
+            settings['random_fragments_selection'],
+            brute_force
+        )
 
         # replace fragments
         new_compouds = os.path.join(generation_dir, '{}_gen_compounds.sdf'.format(gen))
@@ -272,23 +291,27 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
             settings['min_inc'] = -2
         if 'max_inc' not in settings:
             settings['max_inc'] = 2
-        frag_replacement.main(settings['processed_predictions_file'],
-                                        settings['worst_fragments_file'],
-                                        settings['fragments_ids_file'],
-                                        settings['replacement_database'],
-                                        settings['radius'],
-                                        settings['min_inc'],
-                                        settings['max_inc'],
-                                        settings['max_frag_size'],
-                                        new_compouds,
-                                        settings['n_cores'],
-                                        settings['protected_ids'])
+        frag_replacement.main(
+            settings['processed_predictions_file'],
+            settings['worst_fragments_file'],
+            settings['fragments_ids_file'],
+            settings['replacement_database'],
+            settings['radius'],
+            settings['min_inc'],
+            settings['max_inc'],
+            settings['max_frag_size'],
+            new_compouds,
+            settings['n_cores'],
+            settings['protected_ids']
+        )
 
         settings['seed_structure'] = new_compouds
 
-        num_of_compounds = optimizer_utils.add_mols_into_db(settings['seed_structure'],
-                                                            settings['output_database'],
-                                                            gen+1)
+        num_of_compounds = optimizer_utils.add_mols_into_db(
+            settings['seed_structure'],
+            settings['output_database'],
+            gen + 1
+        )
 
         # check if we have new compounds in new generation
         if num_of_compounds == 0:
