@@ -22,51 +22,6 @@ pandas_table = NewType('Processed pandas table with id of compound and predicted
                       )
 
 
-def save_output_old(input_sdf: str, out_fname: str, output_poll: pandas_table) -> None:
-
-    """
-    Save output dictionary to file with predicted values. Can't use rdkit
-    save_output_poll in optimizer_utils. Somehow it changes structure of compounds
-    and during calculating fragment contribution it changes predicted values
-
-    :param in_sdf: path to input sdf file
-    :param out_fname: path to output sdf file
-    :output_poll: pandas table with selected compounds
-    """
-
-    output_string = ''
-
-    in_file = open(input_sdf, 'r')
-    out_file = open(out_fname, 'w')
-    iter_file = iter(in_file)
-    not_find_beg = True
-    not_find_end = True
-    for id in output_poll.index:
-        while not_find_beg:
-            line = in_file.readline().rstrip()
-            if line == id:
-                output_string += line + '\n'
-                while not_find_beg:
-                    line = in_file.readline().rstrip()
-                    if '$$$$' in line:
-                        for record, parameter in zip(output_poll.loc[id], output_poll.columns):
-                            output_string += '>  <pred_{}>\n {}\n\n'.format(parameter, record)
-                        output_string += line + '\n'
-                        not_find_end = False
-                        not_find_beg = False
-                    else:
-                        output_string += line + '\n'
-            else:
-                while not '$$$$' in line:
-                    line = in_file.readline().rstrip()
-                pass
-        in_file.seek(0)
-        not_find_beg, not_find_end = True, True
-
-    out_file.write(output_string)
-    out_file.close()
-    in_file.close()
-
 def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> None:
 
     """
@@ -94,14 +49,14 @@ def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> No
             found_id = line
             this_line_is_id = False
 
-        if   '>  <ID>' in line:
+        if   '>  <id>' in line:
             this_line_is_id = True
 
         if line.rstrip() == '$$$$':
             if found_id in output_poll.index:
                 for record, parameter in zip(output_poll.loc[found_id], output_poll.columns):
                     mol_str.append('>  <pred_{}>'.format(parameter))
-                    mol_str.append(' {}'.format(record))
+                    mol_str.append('{}'.format(record))
                     mol_str.append('')
                 mol_str[0] = found_id
                 mol_str.append(line)
@@ -117,6 +72,7 @@ def save_output(input_sdf: str, out_fname: str, output_poll: pandas_table) -> No
     out_file.write('\n'.join(output_mols))
     out_file.close()
     in_file.close()
+
 
 def prepare_working_arr(in_pred: List, parameters: List, bounding_box: bool, proba_consensus:bool=True) -> pandas_table:
     #  todo param proba_consensus should go to config, so regression recalculation will be avoided+bettertracking of run
@@ -145,7 +101,7 @@ def prepare_working_arr(in_pred: List, parameters: List, bounding_box: bool, pro
         table.drop('bound_box', axis=1, inplace=True)
         if proba_consensus:
             table.drop(table.columns[-1], axis=1, inplace=True)# drop  consensus
-            table['consensus']  = table.loc[:,['consensus' not in i for i in  table.columns]].mean(axis=1) # get new consensus
+            table['consensus']  = table.loc[:,['Compounds' not in i for i in  table.columns]].mean(axis=1) # get new consensus  # TODO: PP, why "consensus" was used? why not to remove the first column by index?
 
         cols_to_drop = list(range(1,table.shape[1]-1)) # drop all but (new) consensus
         table.drop(table.columns[cols_to_drop], axis=1, inplace=True)
@@ -155,11 +111,12 @@ def prepare_working_arr(in_pred: List, parameters: List, bounding_box: bool, pro
     tables = pd.concat(tables, axis=1, join='inner')
 
     # if ad
-    if bounding_box:
+    if bounding_box:   # TODO: PP, this condition is not needed
         if tables.shape[0] == 0:
             return None
 
     return tables
+
 
 def compute_distance_from_threshold(x: float, threshold: List) -> float:
     """
@@ -179,6 +136,7 @@ def compute_distance_from_threshold(x: float, threshold: List) -> float:
 
     else:   # between
         return threshold[1] - x if x < threshold[1] else x - threshold[2]
+
 
 def update_database(out_database: str, predictions: pandas_table,
                     output_filtering: pandas_table) -> None:
@@ -252,6 +210,7 @@ def get_norm_value(x_input: float, function: List) -> float:
             return float(function[index][1].subs(x, x_input))
     return 0
 
+
 def main(in_sdf, in_pred, out_database, out_fname, parameters,
          optimization_method, thresholds, ad, desirabilities=None,
          n_compounds=0, random_compounds=0, additive_agg = True, brute_force=False):
@@ -281,11 +240,10 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
     """
     print('Processing predictions ...')
 
-
     # process all predictions
     predictions = prepare_working_arr(in_pred, parameters, ad)
 
-    if predictions is None:
+    if ad and predictions is None:
         print('Compounds are not in ad. Calculating outside ad!')
         predictions = prepare_working_arr(in_pred, parameters, False)
 
@@ -310,9 +268,11 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
         output_filtering = distance_predictions[distance_predictions.apply(lambda x:  np.all(x<=0), axis=1)] # all parameteres within thres
         output_filtering = predictions.loc[output_filtering.index].copy()
         if output_filtering.shape[0] > 0:
-            save_output(in_sdf,
-                        os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
-                        output_filtering)
+            save_output(
+                in_sdf,
+                os.path.join(os.path.dirname(in_sdf), 'output_match.sdf'),
+                output_filtering
+            )
         update_database(out_database, prepare_working_arr(in_pred, parameters, False), output_filtering)
 
         # calc random compounds needed number
@@ -364,13 +324,9 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
         else:
                 print('Unspecified optimization method!')
 
-
         if random_compounds > 0:
             if len(selected_compounds_index) < n_compounds:
-
                 predictions_diff = predictions.loc[predictions.index.difference(selected_compounds_index)]
-
-
                 predictions_diff = predictions_diff.loc[predictions_diff.index.difference(output_filtering.index)]
                 if predictions_diff.shape[0]>0: # any data available
                     selected_compounds_index.extend(
@@ -378,12 +334,11 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
 
         # save selected compounds
 
-        save_output(in_sdf,
-                    out_fname,
-                    predictions.loc[selected_compounds_index])
-
-
-
+        save_output(
+            in_sdf,
+            out_fname,
+            predictions.loc[selected_compounds_index]
+        )
 
 
 if __name__ == '__main__':

@@ -43,10 +43,10 @@ def save_output_poll(in_sdf: str, out_fname: str, output_poll: pandas_table) -> 
     supplier = Chem.SDMolSupplier(in_sdf)
 
     for mol in supplier:
-        if mol.GetProp('ID') in output_poll.index:
+        if mol.GetProp('id') in output_poll.index:
             for col in output_poll.columns:
                 mol.SetProp('predicted_{}'.format(col),
-                            str(output_poll.loc[mol.GetProp('ID'), col]))
+                            str(output_poll.loc[mol.GetProp('id'), col]))
             output.write(mol)
 
 def create_database(working_dir: str, parameter_to_optimize: List) -> str:
@@ -60,14 +60,17 @@ def create_database(working_dir: str, parameter_to_optimize: List) -> str:
     parameter_to_optimize = ["predicted_{}".format(parameter) for parameter in parameter_to_optimize]
     path_to_database = os.path.join(working_dir, 'output.db')
 
-    table_str = "CREATE TABLE optimizer_table"\
-                    "(id TEXT NOT NULL,"\
-                    "smi TEXT NOT NULL UNIQUE,"\
-                    "generation INTEGER NOT NULL,"\
-                    "parent TEXT,"\
-                    "transformation TEXT,"\
-                    "fit INTEGER,"
-    table_str += " REAL,".join(parameter_to_optimize) + " REAL)"
+    table_str = ("""CREATE TABLE optimizer_table(
+                    id TEXT NOT NULL,
+                    smi TEXT NOT NULL UNIQUE,
+                    mol_block TEXT NOT NULL UNIQUE,
+                    protected_ids TEXT NOT NULL,
+                    generation INTEGER NOT NULL,
+                    parent TEXT,
+                    transformation TEXT,
+                    fit INTEGER, """ +
+                 " REAL,".join(parameter_to_optimize) +
+                 " REAL)")
 
     if os.path.isfile(path_to_database):
         os.remove(path_to_database)
@@ -94,60 +97,89 @@ def add_mols_into_db(input_sdf: str, database: str, gen: int) -> int:
     :return: number of compounds added to database
     """
 
-    num_of_compounds = 0
-
     # get generator of mols in sdf file
-    supplier = Chem.SDMolSupplier(input_sdf,removeHs=False)
-
-    new_sdf_path = os.path.join(os.path.dirname(input_sdf), 'tmp.sdf')
-    new_sdf = Chem.SDWriter(new_sdf_path)
+    supplier = Chem.SDMolSupplier(input_sdf, removeHs=False)
 
     with lite.connect(database) as con:
 
         cursor = con.cursor()
 
-        cursor.execute("SELECT smi FROM optimizer_table")
-        mols_in_db = [mol[0] for mol in cursor.fetchall()]
+        max_rowid = cursor.execute("SELECT MAX(rowid) FROM optimizer_table").fetchone()[0]
 
         insert_query = []
 
-        for mol in supplier:
+        for i, mol in enumerate(supplier, 1):
             if not mol:
-                return 0
-            smile = Chem.MolToSmiles(mol)
+                continue
 
-            # mol doesn't have parent and transformation prop if it is in zero gen
+            mol.SetProp("_Name", "ID_{}_{}".format(gen, i))
             if gen == 0:
-                mol.SetProp("_Name", "ID_{}_{}".format(gen, num_of_compounds))
-                mol.SetProp("ID", "ID_{}_{}".format(gen, num_of_compounds))
-                mol.SetProp("parent_name", "None")
+                mol.SetProp("parent", "None")
                 mol.SetProp("transformation", "None")
-                new_sdf.write(mol)
 
-            if smile not in mols_in_db:
+            smi = Chem.MolToSmiles(Chem.RemoveHs(mol))
+            mol_block = Chem.MolToMolBlock(Chem.AddHs(mol))  # mol_block is always hydrogenized
 
-                # change indexes
-                if gen != 0:
-                    mol.SetProp("_Name", "ID_{}_{}".format(gen, num_of_compounds))
-                    mol.SetProp("ID", "ID_{}_{}".format(gen, num_of_compounds))
-                    new_sdf.write(mol)
+            data = (mol.GetProp("_Name"),
+                                 smi,
+                                 mol_block,
+                                 gen,
+                                 mol.GetProp('parent'),
+                                 mol.GetProp('transformation'))
+            if 'protected_ids' in mol.GetPropNames():
+                data += (mol.GetProp('protected_ids'), )
+            else:
+                data += (None, )
+            insert_query.append(data)
 
-                insert_query.append((mol.GetProp("ID"),
-                                     Chem.CanonSmiles(smile),
-                                     gen,
-                                     mol.GetProp('parent_name'),
-                                     mol.GetProp('transformation')))
-                mols_in_db.append(smile)
-                num_of_compounds += 1
+        cursor.executemany("""INSERT OR IGNORE INTO optimizer_table (
+                                     id, 
+                                     smi,
+                                     mol_block,
+                                     generation, 
+                                     parent, 
+                                     transformation,
+                                     protected_ids) 
+                                  VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                           insert_query)
 
-        cursor.executemany("INSERT INTO optimizer_table (id, smi, generation, parent, transformation) VALUES (?, ?, ?, ?, ?)", insert_query)
         con.commit()
 
-        new_sdf.close()
-        os.remove(input_sdf)
-        os.rename(new_sdf_path, input_sdf)
+        if max_rowid is None:  # the first iteration, empty DB
+            num_inserted_compounds = cursor.execute("SELECT COUNT(rowid) FROM optimizer_table").fetchone()[0]
+        else:
+            num_inserted_compounds = cursor.execute("SELECT COUNT(rowid) FROM optimizer_table WHERE rowid > ?",
+                                                    (max_rowid,)).fetchone()[0]
 
-    return num_of_compounds
+    return num_inserted_compounds
+
+
+def get_mols(database: str, gen: int = None, fields: list = None) -> list:
+    """
+    param: database: path to database
+    param: gen: the number of a generation, if None the last one is taken
+    param: fields: list of fields to consider
+    """
+    mols = []
+    with lite.connect(database) as con:
+        cursor = con.cursor()
+        if gen is None:
+            gen = cursor.execute("""SELECT MAX(gen) FROM optimizer_table""").fetchone()[0]
+        if fields:
+            sql = f"""SELECT mol_block, {','.join(fields)}  
+                      FROM optimizer_table
+                      WHERE generation = ?"""
+        else:
+            sql = """SELECT mol_block  FROM optimizer_table WHERE generation = ?"""
+        cursor.execute(sql, (gen,))
+        for item in cursor.fetchall():
+            mol = Chem.MolFromMolBlock(item[0], removeHs=False)
+            if mol:
+                for field, value in zip(fields, item[1:]):
+                    mol.SetProp(field, value)
+                mols.append(mol)
+    return mols
+
 
 def count_fitted_compounds(database: str) -> int:
     """
@@ -180,7 +212,7 @@ def quote_str(s: str) -> str:
 
 def calculate_fingerprints(input_sdf_file: str,
                             fingerprint_type: str,  model_path:str=None,parameter_name:str=None,
-                            fragments_ids=None, id_field_name: str = 'ID') -> None:
+                            fragments_ids=None, id_field_name: str = 'id') -> None:
     """
     Create files with RDKIT fingerprints. Encoded as: ECFP4='MG2', atom pair fingerprint='AP', rdkit fingerprint: 'RDK',
     topological torsions: TT; binary (hashed) versions  are specified with 'b' prefix, e.g. 'bAP'.
@@ -221,16 +253,15 @@ def calculate_fingerprints(input_sdf_file: str,
                           )
 
     else: # rdkit fingerprint
-        descriptors.main_params(  in_fname=input_sdf_file,    # input
-                          out_fname=x_fname,        # output
-
-                          opt_verbose=False,
-                          opt_noH=False,
-                          frag_fname=fragments_ids,
-                          per_atom_fragments=False,
-                          id_field_name=id_field_name,
-                          output_format="svm",
-                          get_fp=fingerprint_type)
+        descriptors.main_params(in_fname=input_sdf_file,    # input
+                                out_fname=x_fname,  # output
+                                opt_verbose=False,
+                                opt_noH=False,
+                                frag_fname=fragments_ids,
+                                per_atom_fragments=False,
+                                id_field_name=id_field_name,
+                                output_format="svm",
+                                get_fp=fingerprint_type)
 
 
 def get_child_protected_atom_ids(mol, protected_parent_ids):
@@ -254,7 +285,7 @@ def filter_columns_by_keyword(df, keyword):
 
 def calculate_sirms_descriptors(input_sdf_file: str,
                                 n_cores: int,
-                                fragments_ids=None, id_field_name: str = 'ID') -> None:
+                                fragments_ids=None, id_field_name: str = 'id') -> None:
     """
     Create files with descriptors
 
@@ -335,8 +366,7 @@ def predict_properties(parameters: List, descriptors_fname: str, multitask:bool=
                             )
 
 def find_frags_rdkit(input_sdf_file: str, fragment_ids_file: str,
-                     smarts_string: str, max_cuts: int,
-                      error_fname: str,
+                     smarts_string: str, max_cuts: int, error_fname: str,
                      verbose: bool=False) -> None:
     """
     Creates file with fragments from sdf file
@@ -350,18 +380,19 @@ def find_frags_rdkit(input_sdf_file: str, fragment_ids_file: str,
     """
 
     print("Finding fragments has started")
+
     find_frags.main_params(in_sdf=input_sdf_file,
-                                out_txt=fragment_ids_file,
-                                query=smarts_string,
-                                max_cuts=max_cuts,
-                                radius = [0], # todo is it safe to hardcode this arg?
-                                verbose=verbose,
+                           out_txt=fragment_ids_file,
+                           query=smarts_string,
+                           max_cuts=max_cuts,
+                           radius=[0],  # todo is it safe to hardcode this arg?
+                           verbose=verbose,
                            keep_stereo=False,
-                                error_fname=error_fname)
+                           error_fname=error_fname)
+
 
 def calc_frag_contrib(x_fname: str, parameters: List, types_of_alg: List,
-                      models_dir: List, models_type: List,
-                     multitask: bool=False) -> None:
+                      models_dir: List, models_type: List, multitask: bool=False) -> None:
     """
     Calculate contributions of fragments. All records in list must be specified
     in same order.
@@ -389,18 +420,19 @@ def calc_frag_contrib(x_fname: str, parameters: List, types_of_alg: List,
 
         else:
             frag_contrib.main_params(x_fname=x_fname,
-                                 out_fname=os.path.join(os.path.dirname(x_fname),
-                                                        'contrib_{}.txt'.format(parameter)),
-                                 model_names=type_of_alg,
-                                 model_dir=model_dir,
-                                 prop_names=['overall'],
-                                 model_type=model_type,
-                                 activity_file=None,
-                                 verbose=False,
-                                 save_pred=False,
-                                 input_format="svm",
-                                 long_format=True,
-                                 save_frag_ids=True)
+                                     out_fname=os.path.join(os.path.dirname(x_fname),
+                                                            'contrib_{}.txt'.format(parameter)),
+                                     model_names=type_of_alg,
+                                     model_dir=model_dir,
+                                     prop_names=['overall'],
+                                     model_type=model_type,
+                                     activity_file=None,
+                                     verbose=False,
+                                     save_pred=False,
+                                     input_format="svm",
+                                     long_format=True,
+                                     save_frag_ids=True)
+
 
 def parse_threshold(thresholds: List) -> List:
     """

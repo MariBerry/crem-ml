@@ -68,7 +68,7 @@ min_inc, max_inc,
                         max_size):
         products = []
         try:
-            mol_id = str(mol.GetProp('ID'))
+            mol_id = str(mol.GetProp('id'))
             if prot_ids is not None:
                 protected_ids = list(map(int, mol.GetProp(prot_ids).split(',')))
             else:
@@ -104,7 +104,7 @@ min_inc, max_inc,
                 for new_smile, transformation, molobj in out:
                         # new_mol = Chem.MolFromSmiles(new_smile)
                         new_mol = molobj
-                        new_mol.SetProp('parent_name', bad_mol_name)
+                        new_mol.SetProp('parent', bad_mol_name)
                         new_mol.SetProp('transformation', transformation)
                         if prot_ids is not None:
                             new_mol.SetProp('protected_ids',','.join(map(str,get_child_protected_atom_ids(new_mol, protected_ids))))

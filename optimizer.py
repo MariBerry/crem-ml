@@ -47,12 +47,9 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
 
         # create generation dir
         generation_dir = os.path.join(settings['working_dir'], 'generation_{}'.format(gen))
-        if os.path.exists(generation_dir):
+        if os.path.exists(generation_dir):  # TODO: PP, not necessary if the parent dir was already cleared
            shutil.rmtree(generation_dir)
         os.makedirs(generation_dir)
-
-        # for new IDs and check if something was created
-        num_of_compounds = 0
 
         if gen == 0:
             # add new unique compounds into database
@@ -67,70 +64,35 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
                 print("\nIn generation {} aren't new compounds".format(gen))
                 sys.exit()
 
-        # copy input_sdf_file into gen directory
-        new_sdf = os.path.join(generation_dir, 'input_dataset.sdf')
-        shutil.copyfile(settings['seed_structure'], new_sdf)
+        mols = optimizer_utils.get_mols(settings['output_database'],
+                                        gen,
+                                        ['id', 'parent', 'transformation', 'protected_ids'])
+        settings['seed_structure'] = os.path.join(generation_dir,
+                                                  'input_dataset_Hs.sdf')
+        writer = Chem.SDWriter(settings['seed_structure'])
+        for mol in mols:
+            writer.write(mol)
+        writer.close()
 
         # start generation
         start = datetime.datetime.now()
         print(50 * '_', '\nGeneration {}: {}'.format(gen, start))
 
-        #  Add Hs
-        new_sdf_Hs = Chem.SDWriter(os.path.join(os.path.dirname(new_sdf), 'input_dataset_Hs.sdf'))
-        for mol in Chem.SDMolSupplier(new_sdf, removeHs=False):
-            new_sdf_Hs.write(Chem.AddHs(mol))
-        new_sdf_Hs.close()
-        settings['seed_structure'] = os.path.join(os.path.dirname(new_sdf), 'input_dataset_Hs.sdf')
-
+        # calculation of descriptors and save to x.txt
 
         if settings['descriptors_type'] == 'sirms':  # calculation of  sirms descriptors
-
-            # calculation of sirms descriptors
             optimizer_utils.calculate_sirms_descriptors(
                 settings['seed_structure'],
                 settings['n_cores']
             )
 
-        else:
-            # calculation of  fingerprints
+        elif settings['descriptors_type'] != "MPNN_fingerprint":
+            optimizer_utils.calculate_fingerprints(
+                settings['seed_structure'],
+                settings['descriptors_type'],
+            )
 
-            if settings['descriptors_type'] == "MPNN_fingerprint":
-                if not settings["multitask"]: # default multitask is False
-                    for i, dict in enumerate(parameters_list_dicts): # over parameters
-                        # set path with mpnn model;
-                        mpnn_path = parameters_list_dicts[i]['path']
-                        param_name = parameters_list_dicts[i]['name']
-                        chemprop_descr_and_predict.main_params(
-                            in_fname=settings['seed_structure'],
-                            out_fname=os.path.join(generation_dir,
-                                                   'predictions_{}.txt'.format(param_name)),
-                            model_path=mpnn_path,
-                            model_type=parameters_list_dicts[i]['type_of_model'],
-                            variance_threshold=settings['variance_threshold'],
-                            multitask=False
-                        )
-
-                else: #multitask
-                    mpnn_path = parameters_list_dicts[0]['path'] #  they allhave same path
-                    param_name = parameters_list_dicts[0]['name'] # just to init with , it will be changed for each param
-                    chemprop_descr_and_predict.main_params(
-                        in_fname=settings['seed_structure'],
-                        out_fname=os.path.join(generation_dir,
-                                               'predictions_{}.txt'.format(param_name)),
-                        model_path=mpnn_path,
-                        model_type=parameters_list_dicts[0]['type_of_model'],
-                        variance_threshold=settings['variance_threshold'],
-                        multitask=True
-                    )
-
-
-            else: # non MPNN
-                optimizer_utils.calculate_fingerprints(
-                    settings['seed_structure'],
-                    settings['descriptors_type'],
-                )
-
-        # predict properties based on single x.txt for all params
+        # predict properties based on single x.txt for all params or using MPNN models directly
 
         if  settings['descriptors_type'] != "MPNN_fingerprint":
             fragments_fname = os.path.join(generation_dir, 'x.txt')
@@ -139,16 +101,49 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
                 fragments_fname
             )
 
-        # process predictions
+        elif settings['descriptors_type'] == "MPNN_fingerprint":
+            if not settings["multitask"]: # default multitask is False
+                for i, dict in enumerate(parameters_list_dicts): # over parameters
+                    # set path with mpnn model;
+                    mpnn_path = parameters_list_dicts[i]['path']
+                    param_name = parameters_list_dicts[i]['name']
+                    chemprop_descr_and_predict.main_params(
+                        in_fname=settings['seed_structure'],
+                        out_fname=os.path.join(generation_dir,
+                                               'predictions_{}.txt'.format(param_name)),
+                        model_path=mpnn_path,
+                        model_type=parameters_list_dicts[i]['type_of_model'],
+                        variance_threshold=settings['variance_threshold'],
+                        multitask=False
+                    )
+
+            else: #multitask
+                mpnn_path = parameters_list_dicts[0]['path'] #  they allhave same path
+                param_name = parameters_list_dicts[0]['name'] # just to init with , it will be changed for each param
+                chemprop_descr_and_predict.main_params(
+                    in_fname=settings['seed_structure'],
+                    out_fname=os.path.join(generation_dir,
+                                           'predictions_{}.txt'.format(param_name)),
+                    model_path=mpnn_path,
+                    model_type=parameters_list_dicts[0]['type_of_model'],
+                    variance_threshold=settings['variance_threshold'],
+                    multitask=True
+                )
+
+        # process predictions and save processed_predictions.sdf with selected compounds for CReM mutation
+        # predicted activities will be saved to database at the same time
+
         list_of_prediction_files = []   # prepare list of file paths with predictions
         for parameter in parameters_list_dicts:
             list_of_prediction_files.append(
-                os.path.join(generation_dir, 'predictions_{}.txt'.format(parameter['name'])))
+                os.path.join(generation_dir,
+                             'predictions_{}.txt'.format(parameter['name'])))
         settings['processed_predictions_file'] = os.path.join(generation_dir, 'processed_predictions.sdf')
         if settings["optimization_method"] == "desirability":
             desirabilities  = [parameter['desirability'] for parameter in parameters_list_dicts]
         else:
             desirabilities = None
+
         process_predictions.main(
             settings['seed_structure'],
             list_of_prediction_files,
@@ -166,8 +161,6 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
 
         # get num of fitted compounds
         num_of_fitted_compounds = optimizer_utils.count_fitted_compounds(settings['output_database'])
-
-        # update mols in database
         if num_of_fitted_compounds >= settings['num_output_compounds'] and not brute_force:
             print("Optimizer reached number of fitted compounds specified in config.")
             sys.exit()
@@ -190,6 +183,8 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
             error_fname_frag
         )
 
+        # calculated descriptors/fingerprints to compute fragment contributions
+
         if settings['descriptors_type'] == 'sirms':
             # calculate sirms descriptors of fragments
             optimizer_utils.calculate_sirms_descriptors(
@@ -198,60 +193,16 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
                 fragments_ids=settings['fragments_ids_file']
             )
 
-        else:
-            if settings['descriptors_type'] == 'MPNN_fingerprint':
-                if "multitask" not in settings or not settings["multitask"]: # default multitask is False
-                    for i, dict in enumerate(parameters_list_dicts):
-                        # set path with mpnn model
-                        mpnn_path = parameters_list_dicts[i]['path']
-                        param_name = str(parameters_list_dicts[i]['name'])
-
-                        # calc contrib  for different parameters
-
-                        chemprop_frag_contrib.main_params(
-                            x_fname =settings['seed_structure'],   # TODO: PP, settings['processed_predictions_file'] instead of seed_structures
-                            out_fname=os.path.join(generation_dir,
-                                                   'contrib_{}.txt'.format(param_name)),
-                            model_dir=mpnn_path,
-                            model_type=parameters_list_dicts[i]['type_of_model'],
-                            frag_fname=settings['fragments_ids_file'],
-                            per_atom_fragments=False,
-                            id_field_name=None,
-                            multitask=False,
-                            variance_threshold=settings['variance_threshold'],
-                            save_pred=True,
-                            num_frag_id=True
-                        )
-
-                else: # multitask
-                    mpnn_path = parameters_list_dicts[0]['path']
-                    param_name = str(parameters_list_dicts[0]['name'])
-
-                    # calc contrib using name of 1st parameter;  for all paramas  (because model predicts all properties at once)
-                    chemprop_frag_contrib.main_params(
-                        x_fname=settings['seed_structure'],   # TODO: PP, settings['processed_predictions_file'] instead of seed_structures
-                        out_fname=os.path.join(generation_dir,
-                                               'contrib_{}.txt'.format(param_name)),
-                        model_dir=mpnn_path,
-                        model_type=parameters_list_dicts[0]['type_of_model'],
-                        frag_fname=settings['fragments_ids_file'],
-                        per_atom_fragments=False,
-                        id_field_name=None,
-                        multitask=True,
-                        variance_threshold=settings['variance_threshold'],
-                        save_pred=True,
-                        num_frag_id=True
-                    )
-            else:
-                # calculation of  fingerprints  specified in config
-                optimizer_utils.calculate_fingerprints(
-                    settings['processed_predictions_file'],
-                    settings['descriptors_type'],
-                    fragments_ids=settings['fragments_ids_file']
-                )
+        elif settings['descriptors_type'] != 'MPNN_fingerprint':
+            optimizer_utils.calculate_fingerprints(
+                settings['processed_predictions_file'],
+                settings['descriptors_type'],
+                fragments_ids=settings['fragments_ids_file']
+            )
 
         # calculate fragments contributions
 
+        # sirms and other fingerprints
         if  settings['descriptors_type'] != 'MPNN_fingerprint': # calculate contribs using SINGLE new_x.txt for each param
             new_fragments_fname = os.path.join(generation_dir, 'new_x.txt')
             optimizer_utils.calc_frag_contrib(
@@ -262,8 +213,53 @@ def optimize(settings: Dict, input_config: str, brute_force: bool) -> None:
                 [parameter['type_of_model'] for parameter in parameters_list_dicts]
             )
 
+        elif settings['descriptors_type'] == 'MPNN_fingerprint':
+            if "multitask" not in settings or not settings["multitask"]: # default multitask is False
+                for i, dict in enumerate(parameters_list_dicts):
+                    # set path with mpnn model
+                    mpnn_path = parameters_list_dicts[i]['path']
+                    param_name = str(parameters_list_dicts[i]['name'])
+
+                    # calc contrib  for different parameters
+
+                    chemprop_frag_contrib.main_params(
+                        x_fname =settings['seed_structure'],   # TODO: PP, settings['processed_predictions_file'] instead of seed_structures
+                        out_fname=os.path.join(generation_dir,
+                                               'contrib_{}.txt'.format(param_name)),
+                        model_dir=mpnn_path,
+                        model_type=parameters_list_dicts[i]['type_of_model'],
+                        frag_fname=settings['fragments_ids_file'],
+                        per_atom_fragments=False,
+                        id_field_name=None,
+                        multitask=False,
+                        variance_threshold=settings['variance_threshold'],
+                        save_pred=True,
+                        num_frag_id=True
+                    )
+
+            else: # multitask
+                mpnn_path = parameters_list_dicts[0]['path']
+                param_name = str(parameters_list_dicts[0]['name'])
+
+                # calc contrib using name of 1st parameter;  for all paramas  (because model predicts all properties at once)
+                chemprop_frag_contrib.main_params(
+                    x_fname=settings['seed_structure'],   # TODO: PP, settings['processed_predictions_file'] instead of seed_structures
+                    out_fname=os.path.join(generation_dir,
+                                           'contrib_{}.txt'.format(param_name)),
+                    model_dir=mpnn_path,
+                    model_type=parameters_list_dicts[0]['type_of_model'],
+                    frag_fname=settings['fragments_ids_file'],
+                    per_atom_fragments=False,
+                    id_field_name=None,
+                    multitask=True,
+                    variance_threshold=settings['variance_threshold'],
+                    save_pred=True,
+                    num_frag_id=True
+                )
+
         # find worst fragments
-        settings['fragments_contrib_files'] = [os.path.join(generation_dir, 'contrib_{}.txt'.format(parameter['name']))
+        settings['fragments_contrib_files'] = [os.path.join(generation_dir,
+                                                            'contrib_{}.txt'.format(parameter['name']))
                                                   for parameter in parameters_list_dicts]
         settings['worst_fragments_file'] = os.path.join(generation_dir, 'worst_fragments.txt')
         types_of_alg_contrib = ['_'.join(parameter['types_of_alg']) for parameter in parameters_list_dicts]

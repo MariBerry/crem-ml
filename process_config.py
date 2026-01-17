@@ -132,6 +132,7 @@ def test_config(input_config: str) -> Dict:
     for key, value in config.items():
         # check directories
         if (key == 'working_dir') :
+            os.makedirs(config[key], exist_ok=True)
             assert exists(config[key]), "{} doesn't exists".format(key)
             config[key] = value
         # check files

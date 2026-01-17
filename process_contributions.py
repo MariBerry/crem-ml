@@ -63,12 +63,13 @@ def get_predicted_values_for_whole_compounds(in_file: str, parameters: List) -> 
     compounds = Chem.SDMolSupplier(in_file, removeHs=False,
                                    sanitize=False)
     for mol in compounds:
-        record['Compound'] = mol.GetProp('ID')
+        record['Compound'] = mol.GetProp('id')
         for parameter in parameters:
             record[parameter] = float(mol.GetProp('pred_{}'.format(parameter)))
         predicted_values.append(record)
         record = {}
     return pd.DataFrame(predicted_values).set_index('Compound')
+
 
 def compute_normalized_value(record: pandas_series_row, predictions: pandas_table,
                               parameter: str, threshold: List, range: int) -> float:
