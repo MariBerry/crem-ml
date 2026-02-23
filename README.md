@@ -92,9 +92,8 @@ Activate conda environment:
 Main script is called *optimizer.py*.
 Create a config file. For quick-start create  *config.yml* with default parameters by running.
 
-`$ python optimizer.py -d -n -o `
--d is config creation mode, -n is the  number of optimization targets, 1,2,3 etc. - o is (optional) working directory.
-More info:
+`$ python optimizer.py -d -n 2`
+`-d` is config creation mode, `-n` is the  number of optimization targets, 1, 2, 3 etc.
 
 `$ python optimizer.py --help`
 
