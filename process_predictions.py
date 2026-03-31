@@ -290,7 +290,7 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                                                                   threshold=threshold)
 
         # find compounds which are in threshold
-        output_filtering = distance_predictions[distance_predictions.apply(lambda x:  np.all(x<=0), axis=1)] # all parameteres within thres
+        output_filtering = distance_predictions[distance_predictions[parameters].apply(lambda x:  np.all(x<=0), axis=1)] # all parameteres within thres  
         output_filtering = predictions.loc[output_filtering.index].copy()
         if output_filtering.shape[0] > 0:
             save_output(
@@ -302,7 +302,7 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
 
         # calc random compounds needed number
         n_random = math.floor(n_compounds * random_compounds) #  will be used later
-        ids_not_in_thr = distance_predictions.apply(lambda x: np.any(x > 0), axis=1) # ids of compounds not in threshold
+        ids_not_in_thr = distance_predictions[parameters].apply(lambda x: np.any(x > 0), axis=1) # ids of compounds not in threshold
         # print(ids_not_in_thr)
 
         # if we have less or equal compounds in input sdf then we specified
@@ -337,9 +337,9 @@ def main(in_sdf, in_pred, out_database, out_fname, parameters,
                         apply(get_norm_value, function=function)
 
                 if additive_agg: # additive
-                    desirability_predictions['desirability'] = desirability_predictions.sum(axis=1)/(len(parameters))
+                    desirability_predictions['desirability'] = desirability_predictions[parameters].sum(axis=1)/(len(parameters))
                 else: # multiplicative
-                    desirability_predictions['desirability'] = desirability_predictions.product(axis=1)
+                    desirability_predictions['desirability'] = desirability_predictions[parameters].product(axis=1)
 
                 desirability_predictions = desirability_predictions.sort_values(by='desirability', ascending=False)
                 selected_compounds_index = predictions.loc[desirability_predictions.head(n_compounds).index].index
