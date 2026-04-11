@@ -123,8 +123,8 @@ def prepare_working_arr(in_pred: List, parameters: List, bounding_box: bool, pro
     if spci_models:
         bb_cols = [col for col in tables.columns if str(col).startswith('bound_box_')]
         if bb_cols:
-            # Bounding box is identical for all SPCI models, no need to take minimum value
-            tables['bounding_box'] = tables[bb_cols[0]].astype(int)
+            # Bounding box is evaluated as the minimum (AND operation) across all SPCI models
+            tables['bounding_box'] = tables[bb_cols].min(axis=1).astype(int)
             tables.drop(bb_cols, axis=1, inplace=True)
 
     # if ad

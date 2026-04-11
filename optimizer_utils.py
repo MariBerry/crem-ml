@@ -66,7 +66,7 @@ def create_database(working_dir: str, parameter_to_optimize: List, spci_models: 
                         id TEXT NOT NULL,
                         smi TEXT NOT NULL UNIQUE,
                         mol_block TEXT NOT NULL UNIQUE,
-                        protected_ids TEXT NOT NULL,
+                        protected_ids TEXT,
                         generation INTEGER NOT NULL,
                         parent TEXT,
                         transformation TEXT,
@@ -78,7 +78,7 @@ def create_database(working_dir: str, parameter_to_optimize: List, spci_models: 
                         id TEXT NOT NULL,
                         smi TEXT NOT NULL UNIQUE,
                         mol_block TEXT NOT NULL UNIQUE,
-                        protected_ids TEXT NOT NULL,
+                        protected_ids TEXT,
                         generation INTEGER NOT NULL,
                         parent TEXT,
                         transformation TEXT,
@@ -190,7 +190,8 @@ def get_mols(database: str, gen: int = None, fields: list = None) -> list:
             mol = Chem.MolFromMolBlock(item[0], removeHs=False)
             if mol:
                 for field, value in zip(fields, item[1:]):
-                    mol.SetProp(field, value)
+                    if value is not None:
+                        mol.SetProp(field, value)
                 mols.append(mol)
     return mols
 
